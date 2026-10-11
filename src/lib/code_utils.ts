@@ -29,7 +29,6 @@ export function interpolation(a: number, b: number, t: number, stepScale: number
     const bWeight = 1 - aWeight
     return aWeight * a + b * bWeight;
 }
-
-function clamp(val: number, min: number, max: number): number {
+export function clamp(val: number, min: number, max: number): number {
     return Math.min(Math.max(val, min), max);
 }

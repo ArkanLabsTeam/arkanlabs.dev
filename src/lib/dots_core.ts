@@ -1,5 +1,5 @@
 import { setupCanvas, setupCanvasResolution } from "./canvas_utils";
-import { debounce } from "./code_utils";
+import { clamp, debounce } from "./code_utils";
 
 type Dot = { x: number, y: number };
 type CoreState = {
@@ -66,7 +66,6 @@ export function setupCoreLoop(effect: Effect) {
         requestFrame: null,
     }
     setupCanvasResolution(canvas, ctx);
-    drawBaseDots(coreState);
     coreState.requestFrame = requestFrameWrapper(coreState);
     coreState.abortController = createListeners(coreState);
     effect.setup(coreState.requestFrame);
@@ -77,18 +76,20 @@ export function setupCoreLoop(effect: Effect) {
 function requestFrameWrapper(coreState: CoreState) {
     return () => {
         if (coreState.pendingFrame != null) return;
-        coreState.pendingFrame = requestAnimationFrame((t) => coreLoop(coreState, t));
+        coreState.pendingFrame = requestAnimationFrame((elapsedTime) => coreLoop(coreState, elapsedTime));
     }
 }
 
-function coreLoop(coreState: CoreState, time: number) {
+function coreLoop(coreState: CoreState, elapsedTime: number) {
+    //update
     coreState.pendingFrame = null;
     const { canvas, context: ctx } = coreState;
-    const timeSinceLastLoop = time - (coreState.previousLoopRun ?? time);
-    coreState.previousLoopRun = time;
+    const timeSinceLastLoop = elapsedTime - (coreState.previousLoopRun ?? elapsedTime);
+    coreState.previousLoopRun = elapsedTime;
     const stepScale = getStepScale(timeSinceLastLoop);
     const needsUpdate = coreState.currentEffect?.update(coreState, stepScale);
-
+    
+    //draw
     ctx.clearRect(0, 0, canvas.width, canvas.height); //resetting canvas
     drawBaseDots(coreState);
     coreState.currentEffect?.draw(coreState);
@@ -97,9 +98,9 @@ function coreLoop(coreState: CoreState, time: number) {
     }
 }
 
-function getStepScale(timestamp: number): number {
-    const time_per_60_frames = 16.7; // ms
-    return timestamp / time_per_60_frames; // basically how much we should move, so on slower or faster screens it doesn't change speed
+function getStepScale(elapsedTime: number): number {
+    const ms_per_frame_at_60fps = 16.7; // ms
+    return clamp(elapsedTime / ms_per_frame_at_60fps, 0, 4); // basically how much we should move, so on slower or faster screens it doesn't change speed
 }
 
 
