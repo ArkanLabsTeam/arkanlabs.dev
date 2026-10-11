@@ -6,9 +6,5 @@ import DotGrid from "../components/DotGrid.astro";
 <BaseLayout title="Home Page · Arkan Labs">
 	<DotGrid />
 	<h1>Yes</h1>
-	<script>
-		import { resetCanvasSize } from "../lib/window_utils";
-		window.addEventListener("resize", () => resetCanvasSize("dot-canvas"));
-	</script>
 	<script src="../lib/dots.ts"></script>
 </BaseLayout>

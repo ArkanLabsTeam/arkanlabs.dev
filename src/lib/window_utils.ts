@@ -6,13 +6,13 @@ export function resetCanvasSize(canvasId: string) {
         const ctx = canvas.getContext("2d");
         if (ctx) {
             window.addEventListener("resize", () =>
-                handleWindowSize(canvas, ctx),
+                setupCanvasResolution(canvas, ctx),
             );
         }
     }
 }
 
-export function handleWindowSize(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
+export function setupCanvasResolution(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const { width, height } = canvas.getBoundingClientRect();
 

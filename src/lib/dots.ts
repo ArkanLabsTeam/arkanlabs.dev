@@ -1,4 +1,5 @@
-import { handleWindowSize, resetCanvasSize } from "./window_utils";
+import { debounce } from "./code_utils";
+import { setupCanvasResolution, resetCanvasSize } from "./window_utils";
 type Dot = { x: number, y: number };
 type DotGridState = {
     canvas: HTMLCanvasElement,
@@ -17,25 +18,22 @@ const DOT_GRID_CONFIG = {
     dotRadius: 1.5, // this means each chunk in the grid is 16 + 1.5 wide,
     glowRadius: 150,
     easing: 0.1,
+    canvasId: "dot-canvas"
 } as const;
 
 function setupDotLoop() {
     const canvasData = setupCanvas();
     if (canvasData) {
         const { canvas, ctx } = canvasData;
-        handleWindowSize(canvas, ctx);
-        const { width, height } = canvas.getBoundingClientRect();
-        const chunkSize = DOT_GRID_CONFIG.spacing + DOT_GRID_CONFIG.dotRadius;
-        const columns = Math.ceil(width / chunkSize);
-        const rows = Math.ceil(height / chunkSize);
-        // floor works but could cause some empty space at the bottom
-        const gridSize = { columns: columns, rows: rows };
+        setupCanvasResolution(canvas, ctx);
+        const gridSize = setupGridSize(canvas)
         const dots = setupDots(gridSize);
         const dotGridState: DotGridState = {
             canvas: canvas,
             context: ctx,
             dots: dots
         };
+        window.addEventListener("resize", () => debounceDotRebuild(dotGridState, gridSize, 200));
         animationLoop(dotGridState, gridSize);
     }
 }
@@ -82,14 +80,40 @@ function drawDots(context: CanvasRenderingContext2D, dots: Dot[][]) {
 
 function animationLoop(state: DotGridState, gridSize: GridSize) {
     const { canvas, context: ctx } = state;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
     const root = document.documentElement;
-    const baseDotColor = window.getComputedStyle(root).getPropertyValue("--color-border")
     // fyi unused variables are dropped by tailwind. use @theme static to avoid that.
+    const baseDotColor = window.getComputedStyle(root).getPropertyValue("--color-border")
+    //resetting canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     ctx.fillStyle = baseDotColor.trim();
     drawDots(ctx, state.dots);
     requestAnimationFrame(() => animationLoop(state, gridSize))
 }
 
+function setupGridSize(canvas: HTMLCanvasElement): GridSize {
+    const { width, height } = canvas.getBoundingClientRect();
+    const chunkSize = DOT_GRID_CONFIG.spacing + DOT_GRID_CONFIG.dotRadius;
+    const columns = Math.ceil(width / chunkSize);
+    const rows = Math.ceil(height / chunkSize);
+    // floor works but could cause some empty space at the bottom
+    return { columns: columns, rows: rows };
+}
+
+function windowResizeCallback(state: DotGridState, gridSize: GridSize) {
+    resetCanvasSize(DOT_GRID_CONFIG.canvasId);
+    const { rows, columns } = setupGridSize(state.canvas);
+    gridSize.columns = columns;
+    gridSize.rows = rows;
+    state.dots = setupDots(gridSize);
+}
+
+
+function debounceDotRebuild(dotGridState: DotGridState, gridSize: GridSize, delay: number) {
+    const debounceWrapper = debounce(
+        windowResizeCallback, delay
+    );
+    debounceWrapper(dotGridState, gridSize)
+}
 
 setupDotLoop();
