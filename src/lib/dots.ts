@@ -1,4 +1,4 @@
-import { debounce } from "./code_utils";
+import { debounce, smoothStep } from "./code_utils";
 import { setupCanvasResolution, resetCanvasSize } from "./window_utils";
 type Dot = { x: number, y: number };
 type DotGridState = {
@@ -19,7 +19,7 @@ type GridSize = {
 const DOT_GRID_CONFIG = {
     spacing: 16,
     dotRadius: 1.5, // this means each chunk in the grid is 16 + 1.5 wide,
-    glowRadius: 100,
+    glowRadius: 150,
     easing: 0.1,
     canvasId: "dot-canvas"
 } as const;
@@ -31,7 +31,6 @@ function setupDotLoop() {
         setupCanvasResolution(canvas, ctx);
         const gridSize = setupGridSize(canvas)
         const dots = setupDots(gridSize);
-
         const dotGridState: DotGridState = {
             canvas: canvas,
             context: ctx,
@@ -46,7 +45,7 @@ function setupDotLoop() {
         animationLoop(dotGridState);
     }
 }
-
+// fyi unused variables are dropped by tailwind. use @theme static to avoid that.
 function getAccentColor() {
     const root = document.documentElement;
     return window.getComputedStyle(root).getPropertyValue("--color-accent");
@@ -96,7 +95,7 @@ function drawBaseDots(state: DotGridState) {
 
 function drawCloseDots(state: DotGridState) {
     const context = state.context;
-
+    context.fillStyle = state.accentColor;
     for (const row of state.dots) {
         for (const dot of row) {
             const mouseDotXDifference = (state.mouse.x - dot.x);
@@ -104,8 +103,10 @@ function drawCloseDots(state: DotGridState) {
             const distanceFromMouse = Math.hypot(mouseDotXDifference, mouseDotYDifference);
             if (distanceFromMouse < DOT_GRID_CONFIG.glowRadius) {
                 context.beginPath();
-                changeDotColor(distanceFromMouse, state, state.accentColor);
-                drawDot(context, dot);
+                const smoothStepValue = smoothStep(distanceFromMouse, 0, DOT_GRID_CONFIG.glowRadius);
+                const dotScale = getDotScale(smoothStepValue, 0.5);
+                setDotAlpha(smoothStepValue, state);
+                drawDot(context, dot, dotScale);
                 context.fill();
             }
         }
@@ -113,8 +114,8 @@ function drawCloseDots(state: DotGridState) {
 }
 
 
-function drawDot(context: CanvasRenderingContext2D, dot: Dot) {
-    const radius = DOT_GRID_CONFIG.dotRadius;
+function drawDot(context: CanvasRenderingContext2D, dot: Dot, scale: number = 1) {
+    const radius = DOT_GRID_CONFIG.dotRadius * scale;
     context.moveTo(dot.x + radius, dot.y);
     // it starts drawing from the starting radius, 
     // so we need to move by radius.
@@ -122,11 +123,14 @@ function drawDot(context: CanvasRenderingContext2D, dot: Dot) {
 }
 
 // could be used for the strength
-function changeDotColor(distanceFromMouse: number, state: DotGridState, color: string) {
-    // fyi unused variables are dropped by tailwind. use @theme static to avoid that.
-    if (distanceFromMouse < DOT_GRID_CONFIG.glowRadius) {
-        state.context.fillStyle = color;
-    }
+function setDotAlpha(smoothStep: number, state: DotGridState) {
+    const colorStrength = 1 - smoothStep;
+    state.context.globalAlpha = colorStrength;
+}
+
+function getDotScale(smoothStep: number, maxScaleIncrase: number = 1): number {
+    return 1 + (1 - smoothStep) * maxScaleIncrase;
+
 }
 
 
@@ -135,6 +139,7 @@ function animationLoop(state: DotGridState) {
     //resetting canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     state.context.fillStyle = state.baseColor;
+    state.context.globalAlpha = 1;
     drawBaseDots(state);
     drawCloseDots(state);
     requestAnimationFrame(() => animationLoop(state))
