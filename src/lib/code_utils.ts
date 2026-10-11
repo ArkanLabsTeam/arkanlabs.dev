@@ -23,6 +23,12 @@ export function smoothStep(x: number, min: number, max: number) {
 
 }
 
+export function interpolation(a: number, b: number, t: number, stepScale: number = 1) {
+    const aWeight = (1 - t) ** stepScale;
+    const bWeight = 1 - aWeight
+    return aWeight * a + b * bWeight;
+}
+
 function clamp(val: number, min: number, max: number): number {
     return Math.min(Math.max(val, min), max);
 }

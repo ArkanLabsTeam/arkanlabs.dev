@@ -1,18 +1,19 @@
-import { debounce, smoothStep } from "./code_utils";
+import { debounce, interpolation, smoothStep } from "./code_utils";
 import { setupCanvasResolution, resetCanvasSize } from "./window_utils";
 type Dot = { x: number, y: number };
 type DotGridState = {
-    canvas: HTMLCanvasElement,
-    context: CanvasRenderingContext2D,
-    dots: Dot[][],
-    mouse: { x: number, y: number },
+    canvas: HTMLCanvasElement
+    context: CanvasRenderingContext2D
+    dots: Dot[][]
+    mouse: { x: number, y: number }
+    glow: { x: number, y: number }
     strength: number // how strong the brightness is, 0 for initial
-    accentColor: string,
-    baseColor: string,
+    accentColor: string
+    baseColor: string
 }
 
 type GridSize = {
-    columns: number,
+    columns: number
     rows: number
 }
 
@@ -31,18 +32,21 @@ function setupDotLoop() {
         setupCanvasResolution(canvas, ctx);
         const gridSize = setupGridSize(canvas)
         const dots = setupDots(gridSize);
+        const xCenter = window.innerWidth / 2;
+        const yCenter = window.innerHeight / 2;
         const dotGridState: DotGridState = {
             canvas: canvas,
             context: ctx,
             dots: dots,
             mouse: { x: 0, y: 0 },
+            glow: { x: xCenter, y: yCenter },
             strength: 0,
             accentColor: getAccentColor(),
             baseColor: getBaseColor(),
         };
         window.addEventListener("resize", () => debounceDotRebuild(dotGridState, gridSize, 200));
         window.addEventListener("mousemove", (e) => updateMousePositionInState(e, dotGridState))
-        animationLoop(dotGridState);
+        requestAnimationFrame((timestamp) => animationLoop(dotGridState, timestamp));
     }
 }
 // fyi unused variables are dropped by tailwind. use @theme static to avoid that.
@@ -98,12 +102,13 @@ function drawCloseDots(state: DotGridState) {
     context.fillStyle = state.accentColor;
     for (const row of state.dots) {
         for (const dot of row) {
-            const mouseDotXDifference = (state.mouse.x - dot.x);
-            const mouseDotYDifference = (state.mouse.y - dot.y);
-            const distanceFromMouse = Math.hypot(mouseDotXDifference, mouseDotYDifference);
-            if (distanceFromMouse < DOT_GRID_CONFIG.glowRadius) {
+            const glowCenterDotXDifference = (state.glow.x - dot.x);
+            const glowCenterDotYDifference = (state.glow.y - dot.y);
+            const distanceFromGlowCenter = Math.hypot(glowCenterDotXDifference, glowCenterDotYDifference);
+
+            if (distanceFromGlowCenter < DOT_GRID_CONFIG.glowRadius) {
                 context.beginPath();
-                const smoothStepValue = smoothStep(distanceFromMouse, 0, DOT_GRID_CONFIG.glowRadius);
+                const smoothStepValue = smoothStep(distanceFromGlowCenter, 0, DOT_GRID_CONFIG.glowRadius);
                 const dotScale = getDotScale(smoothStepValue, 0.5);
                 setDotAlpha(smoothStepValue, state);
                 drawDot(context, dot, dotScale);
@@ -128,21 +133,39 @@ function setDotAlpha(smoothStep: number, state: DotGridState) {
     state.context.globalAlpha = colorStrength;
 }
 
-function getDotScale(smoothStep: number, maxScaleIncrase: number = 1): number {
-    return 1 + (1 - smoothStep) * maxScaleIncrase;
+function getDotScale(smoothStep: number, maxScaleIncrease: number = 1): number {
+    return 1 + (1 - smoothStep) * maxScaleIncrease;
 
 }
 
+function interpolateGlowPosition(state: DotGridState, stepScale: number) {
+    const newXGlowPosition = interpolation(state.glow.x, state.mouse.x, DOT_GRID_CONFIG.easing, stepScale);
+    const newYGlowPosition = interpolation(state.glow.y, state.mouse.y, DOT_GRID_CONFIG.easing, stepScale);
+    // when we interpolate 10%, we're asking to return 90% of the value
+    // that represents a step, if we wanna move 2 steps, we return 90% of the 90%, or 90%^2
+    // so the power of (1 - t) represents the step, we can use this to speed or slow the animation based on the framrate 
+    // to make it consistent on all screens
+    state.glow = { x: newXGlowPosition, y: newYGlowPosition };
+}
 
-function animationLoop(state: DotGridState) {
+
+
+function animationLoop(state: DotGridState, timestamp: number) {
     const { canvas, context: ctx } = state;
     //resetting canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     state.context.fillStyle = state.baseColor;
     state.context.globalAlpha = 1;
+    interpolateGlowPosition(state, getStepScale(timestamp));
     drawBaseDots(state);
     drawCloseDots(state);
-    requestAnimationFrame(() => animationLoop(state))
+    requestAnimationFrame((timestamp) => animationLoop(state, timestamp))
+}
+
+
+function getStepScale(timestamp: number): number {
+    const time_per_60_frames = 16.7; // ms
+    return timestamp / time_per_60_frames; // basically how much we should move, so on slower or faster screens it doesn't change speed
 }
 
 function setupGridSize(canvas: HTMLCanvasElement): GridSize {
