@@ -5,7 +5,8 @@ type DotGridState = {
     canvas: HTMLCanvasElement,
     context: CanvasRenderingContext2D,
     dots: Dot[][],
-    // mouse: { x: number, y: number }
+    mouse: { x: number, y: number },
+    strength: number // how strong the brightness is, 0 for initial
 }
 
 type GridSize = {
@@ -31,9 +32,12 @@ function setupDotLoop() {
         const dotGridState: DotGridState = {
             canvas: canvas,
             context: ctx,
-            dots: dots
+            dots: dots,
+            mouse: { x: 0, y: 0 },
+            strength: 0,
         };
         window.addEventListener("resize", () => debounceDotRebuild(dotGridState, gridSize, 200));
+        window.addEventListener("mousemove", (e) => updateMousePositionInState(e, dotGridState))
         animationLoop(dotGridState, gridSize);
     }
 }
@@ -63,10 +67,11 @@ function setupDots(gridSize: GridSize): Dot[][] {
     return dots;
 }
 
-function drawDots(context: CanvasRenderingContext2D, dots: Dot[][]) {
+function drawFarDots(state: DotGridState) {
+    const context = state.context;
     context.beginPath();
     const radius = DOT_GRID_CONFIG.dotRadius;
-    for (const row of dots) {
+    for (const row of state.dots) {
         for (const dot of row) {
             context.moveTo(dot.x, dot.y);
             context.arc(dot.x + radius, dot.y, radius, 0, Math.PI * 2);
@@ -78,16 +83,45 @@ function drawDots(context: CanvasRenderingContext2D, dots: Dot[][]) {
 
 }
 
+function drawCloseDots(state: DotGridState) {
+    const context = state.context;
+    context.beginPath();
+    const radius = DOT_GRID_CONFIG.dotRadius;
+    for (const row of state.dots) {
+        for (const dot of row) {
+            const mouseDotXDifference = (state.mouse.x - dot.x);
+            const mouseDotYDifference = (state.mouse.y - dot.y);
+            const distanceFromMouse = Math.hypot(mouseDotXDifference, mouseDotYDifference);
+            if (distanceFromMouse < DOT_GRID_CONFIG.glowRadius) {
+                changeDotColor(distanceFromMouse, state);
+                context.moveTo(dot.x, dot.y);
+                context.arc(dot.x + radius, dot.y, radius, 0, Math.PI * 2);
+            }
+        }
+    }
+    context.fill();
+}
+
+// could be used for the strength
+function changeDotColor(distanceFromMouse: number, state: DotGridState) {
+    const root = document.documentElement;
+    const accentColor = window.getComputedStyle(root).getPropertyValue("--color-accent");
+    // fyi unused variables are dropped by tailwind. use @theme static to avoid that.
+    if (distanceFromMouse < DOT_GRID_CONFIG.glowRadius) {
+        state.context.fillStyle = accentColor;
+    }
+}
+
+
 function animationLoop(state: DotGridState, gridSize: GridSize) {
     const { canvas, context: ctx } = state;
-    const root = document.documentElement;
-    // fyi unused variables are dropped by tailwind. use @theme static to avoid that.
-    const baseDotColor = window.getComputedStyle(root).getPropertyValue("--color-border")
     //resetting canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = baseDotColor.trim();
-    drawDots(ctx, state.dots);
+    const root = document.documentElement;
+    const baseDotColor = window.getComputedStyle(root).getPropertyValue("--color-border");
+    state.context.fillStyle = baseDotColor;
+    drawFarDots(state);
+    drawCloseDots(state);
     requestAnimationFrame(() => animationLoop(state, gridSize))
 }
 
@@ -114,6 +148,10 @@ function debounceDotRebuild(dotGridState: DotGridState, gridSize: GridSize, dela
         windowResizeCallback, delay
     );
     debounceWrapper(dotGridState, gridSize)
+}
+
+function updateMousePositionInState(mouse: MouseEvent, dotGridState: DotGridState) {
+    dotGridState.mouse = { x: mouse.x, y: mouse.y }
 }
 
 setupDotLoop();
