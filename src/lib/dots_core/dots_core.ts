@@ -1,5 +1,5 @@
-import { setupCanvas, setupCanvasResolution } from "./canvas_utils";
-import { clamp, debounce } from "./code_utils";
+import { setupCanvas, setupCanvasResolution } from "../utils/canvas";
+import { clamp, debounce } from "../utils/general";
 
 type Dot = { x: number, y: number };
 type CoreState = {
@@ -76,19 +76,19 @@ export function setupCoreLoop(effect: Effect) {
 function requestFrameWrapper(coreState: CoreState) {
     return () => {
         if (coreState.pendingFrame != null) return;
-        coreState.pendingFrame = requestAnimationFrame((elapsedTime) => coreLoop(coreState, elapsedTime));
+        coreState.pendingFrame = requestAnimationFrame((now) => coreLoop(coreState, now));
     }
 }
 
-function coreLoop(coreState: CoreState, elapsedTime: number) {
+function coreLoop(coreState: CoreState, now: number) {
     //update
     coreState.pendingFrame = null;
     const { canvas, context: ctx } = coreState;
-    const timeSinceLastLoop = elapsedTime - (coreState.previousLoopRun ?? elapsedTime);
-    coreState.previousLoopRun = elapsedTime;
+    const timeSinceLastLoop = now - (coreState.previousLoopRun ?? now);
+    coreState.previousLoopRun = now;
     const stepScale = getStepScale(timeSinceLastLoop);
     const needsUpdate = coreState.currentEffect?.update(coreState, stepScale);
-    
+
     //draw
     ctx.clearRect(0, 0, canvas.width, canvas.height); //resetting canvas
     drawBaseDots(coreState);
@@ -108,7 +108,7 @@ function getStepScale(elapsedTime: number): number {
 // dots and grid setup area
 function setupDots(gridSize: GridSize): Dot[][] {
     const dots: Dot[][] = [];
-    const chunkSize = DOT_GRID_CONFIG.spacing + DOT_GRID_CONFIG.dotRadius * 2;
+    const chunkSize = getGridSize();
     for (let i = 0; i < gridSize.rows; i++) {
         dots.push([])
         for (let j = 0; j < gridSize.columns; j++) {
@@ -118,6 +118,10 @@ function setupDots(gridSize: GridSize): Dot[][] {
         }
     }
     return dots;
+}
+
+function getGridSize(): number {
+    return DOT_GRID_CONFIG.spacing + DOT_GRID_CONFIG.dotRadius * 2;
 }
 
 function drawBaseDots(state: CoreState) {
@@ -153,7 +157,7 @@ function getDotDrawPosition(row: number, column: number, chunkSize: number): { x
 
 function setupGridSize(canvas: HTMLCanvasElement): GridSize {
     const { width, height } = canvas.getBoundingClientRect();
-    const chunkSize = DOT_GRID_CONFIG.spacing + DOT_GRID_CONFIG.dotRadius;
+    const chunkSize = getGridSize();
     const columns = Math.ceil(width / chunkSize);
     const rows = Math.ceil(height / chunkSize);
     // floor works but could cause some empty space at the bottom
