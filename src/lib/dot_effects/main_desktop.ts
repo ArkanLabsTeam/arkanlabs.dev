@@ -1,5 +1,5 @@
-import { drawDot, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
-import { closeTo, interpolation, smoothStep, type position } from "./utils/general"
+import { drawDot, setupCoreLoop, type PublicCoreState, type RequestFrameFunction } from "../dots_core/dots_core";
+import { closeTo, interpolation, smoothStep, type position } from "../utils/general"
 
 type MainPageDesktopState = {
     mouse: position,
@@ -11,12 +11,9 @@ type MainPageDesktopState = {
     prefersReducedMotion: boolean
 }
 
-type JoinedState = MainPageDesktopState & PublicCoreState;
-
 const GLOW_ANIMATION_CONFIG = {
-    spacing: 16,
     easing: 0.1,
-    snapStrengthThreshold: 0.3,
+    snapStrengthThreshold: 0.1,
     glowRadius: 150,
 
 } as const;
@@ -43,51 +40,67 @@ function setupMainLoop(): void {
     }
 
     const update = (coreState: PublicCoreState, stepScale: number): boolean => {
-        const joinedState = joinStates(coreState, mainState);
-        if (prefersReducedMotion) return false;
-        interpolateGlowPosition(joinedState, stepScale);
-        updateStrengthBasedOnMousePosition(joinedState, stepScale);
-        const shouldRequestFrameForMousePresence = shouldRequestFrameForMouseWindowPresence(joinedState) ?? false;
-        const shouldReuqestFrameForMouseMovement = shouldReuqestFrameForMouseWindowMovement(joinedState) ?? false;
-        return shouldRequestFrameForMousePresence || shouldReuqestFrameForMouseMovement;
+        if (mainState.prefersReducedMotion) return false;
+        console.log(stepScale);
+        interpolateGlowPosition(mainState, stepScale);
+        updateStrengthBasedOnMousePosition(mainState, stepScale);
+        const shouldRequestFrameForMousePresence = shouldRequestFrameForMouseWindowPresence(mainState);
+        const shouldRequestFrameForMouseMovement = shouldRequestFrameForMouseWindowMovement(mainState);
+        if (!shouldRequestFrameForMousePresence) {
+            snapStrength(mainState);
+        }
+
+        if (!shouldRequestFrameForMouseMovement) {
+            snapGlow(mainState);
+        }
+
+        return shouldRequestFrameForMousePresence || shouldRequestFrameForMouseMovement;
     }
 
     const draw = (coreState: PublicCoreState) => {
-
+        if (mainState.prefersReducedMotion) return;
+        drawCloseDots(mainState, coreState);
     }
 
+    setupCoreLoop({
+        setup,
+        cleanup,
+        update,
+        draw
+    });
+
+}
+setupMainLoop(); // you would wanna build a chooser file
+function snapGlow(mainState: MainPageDesktopState) {
+    mainState.glow = { x: mainState.mouse.x, y: mainState.mouse.y };
 }
 
 
-function shouldReuqestFrameForMouseWindowMovement(joinedState: JoinedState): boolean | void {
-    const { mouse, glow } = joinedState;
-    const mouseGlowDistance = Math.hypot(mouse.x - glow.x, mouse.y - glow.y);
-    const tolerance = 0.5;
-    if (!closeTo(mouseGlowDistance, 0, tolerance)) {
-        return true;
-    } else {
-        joinedState.glow = mouse;
-    }
-
-}
-function shouldRequestFrameForMouseWindowPresence(joinedState: JoinedState): boolean | void {
-    const strength = joinedState.strength;
-    const mouseInScreen = joinedState.isMouseInScreen;
-    const tolerance = 0.01;
+function snapStrength(mainState: MainPageDesktopState) {
+    const mouseInScreen = mainState.isMouseInScreen;
     if (mouseInScreen) {
-        if (!closeTo(strength, 1, tolerance)) {
-            return true;
-        } else {
-            joinedState.strength = 1;
-        }
+        mainState.strength = 1;
     }
     if (!mouseInScreen) {
-        if (!closeTo(strength, 0, tolerance)) {
-            return true;
+        mainState.strength = 0;
+    }
+}
 
-        } else {
-            joinedState.strength = 0;
-        }
+function shouldRequestFrameForMouseWindowMovement(mainState: MainPageDesktopState): boolean {
+    const { mouse, glow } = mainState;
+    const mouseGlowDistance = Math.hypot(mouse.x - glow.x, mouse.y - glow.y);
+    const tolerance = 0.5;
+    return !closeTo(mouseGlowDistance, 0, tolerance);
+
+}
+function shouldRequestFrameForMouseWindowPresence(mainState: MainPageDesktopState): boolean {
+    const strength = mainState.strength;
+    const mouseInScreen = mainState.isMouseInScreen;
+    const tolerance = 0.01;
+    if (mouseInScreen) {
+        return !closeTo(strength, 1, tolerance);
+    } else {
+        return !closeTo(strength, 0, tolerance)
     }
 }
 
@@ -100,10 +113,10 @@ function getScreenCenter(): position {
 }
 
 // dots
-function drawCloseDots(state: JoinedState) {
-    const context = state.context;
+function drawCloseDots(state: MainPageDesktopState, coreState: PublicCoreState) {
+    const context = coreState.context;
     context.fillStyle = state.accentColor;
-    for (const row of state.dots) {
+    for (const row of coreState.dots) {
         for (const dot of row) {
             const glowCenterDotXDifference = (state.glow.x - dot.x);
             const glowCenterDotYDifference = (state.glow.y - dot.y);
@@ -113,7 +126,7 @@ function drawCloseDots(state: JoinedState) {
                 context.beginPath();
                 const smoothStepValue = smoothStep(distanceFromGlowCenter, 0, GLOW_ANIMATION_CONFIG.glowRadius);
                 const dotScale = getDotScale(smoothStepValue, 0.5);
-                setDotAlpha(smoothStepValue, state);
+                setDotAlpha(smoothStepValue, state, coreState);
                 drawDot(context, dot, dotScale);
                 context.fill();
             }
@@ -121,9 +134,9 @@ function drawCloseDots(state: JoinedState) {
     }
 }
 
-function setDotAlpha(smoothStep: number, state: JoinedState) {
+function setDotAlpha(smoothStep: number, state: MainPageDesktopState, coreState: PublicCoreState) {
     const colorStrength = (1 - smoothStep) * state.strength;
-    state.context.globalAlpha = colorStrength;
+    coreState.context.globalAlpha = colorStrength;
 }
 
 function getDotScale(smoothStep: number, maxScaleIncrease: number = 1): number {
@@ -131,17 +144,14 @@ function getDotScale(smoothStep: number, maxScaleIncrease: number = 1): number {
 
 }
 
-function interpolateGlowPosition(state: JoinedState, stepScale: number) {
+function interpolateGlowPosition(state: MainPageDesktopState, stepScale: number) {
     const newXGlowPosition = interpolation(state.glow.x, state.mouse.x, GLOW_ANIMATION_CONFIG.easing, stepScale);
     const newYGlowPosition = interpolation(state.glow.y, state.mouse.y, GLOW_ANIMATION_CONFIG.easing, stepScale);
-    // when we interpolate 10%, we're asking to return 90% of the value
-    // that represents a step, if we wanna move 2 steps, we return 90% of the 90%, or 90%^2
-    // so the power of (1 - t) represents the step, we can use this to speed or slow the animation based on the framrate 
-    // to make it consistent on all screens
+
     state.glow = { x: newXGlowPosition, y: newYGlowPosition };
 }
 
-function updateStrengthBasedOnMousePosition(state: JoinedState, stepScale: number) {
+function updateStrengthBasedOnMousePosition(state: MainPageDesktopState, stepScale: number) {
     if (state.isMouseInScreen) {
         state.strength = interpolation(state.strength, 1, GLOW_ANIMATION_CONFIG.easing, stepScale);
     } else {
@@ -154,7 +164,7 @@ function updateStrengthBasedOnMousePosition(state: JoinedState, stepScale: numbe
 //colors
 function getAccentColor() {
     const root = document.documentElement;
-    return window.getComputedStyle(root).getPropertyValue("--color-accent");
+    return window.getComputedStyle(root).getPropertyValue("--color-accent").trim();
 }
 
 //listeners 
@@ -165,16 +175,26 @@ function setupListeners(state: MainPageDesktopState): AbortController {
 
     window.addEventListener("mousemove", (e) => updateMousePositionState(e, state), { signal })
     document.addEventListener("mouseenter", (e) => updateMousePositionState(e, state), { signal });
-    document.addEventListener("mouseleave", () => state.isMouseInScreen = false, { signal });
-    motionQuery.addEventListener('change', (e) => e.matches, { signal });
+    document.addEventListener("mouseleave", () => updateMousePositionStateOnLeave(state), { signal });
+    motionQuery.addEventListener('change', (e) => updatePreferReducedMotion(e, state), { signal });
     return controller;
+}
+
+function updatePreferReducedMotion(e: MediaQueryListEvent, dotGridState: MainPageDesktopState) {
+    dotGridState.prefersReducedMotion = e.matches
+    dotGridState.requestFrame();
+}
+
+function updateMousePositionStateOnLeave(dotGridState: MainPageDesktopState) {
+    dotGridState.isMouseInScreen = false
+    dotGridState.requestFrame();
 }
 
 function updateMousePositionState(mouse: MouseEvent, dotGridState: MainPageDesktopState) {
     dotGridState.mouse = { x: mouse.x, y: mouse.y }
     dotGridState.isMouseInScreen = true;
-}
-
-function joinStates(coreState: PublicCoreState, mainState: MainPageDesktopState): JoinedState {
-    return { ...coreState, ...mainState };
+    if (dotGridState.strength <= GLOW_ANIMATION_CONFIG.snapStrengthThreshold) {
+        dotGridState.glow = { x: mouse.x, y: mouse.y }
+    }
+    dotGridState.requestFrame();
 }

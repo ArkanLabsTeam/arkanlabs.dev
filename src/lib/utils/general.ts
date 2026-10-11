@@ -30,6 +30,10 @@ export function interpolation(a: number, b: number, t: number, stepScale: number
     const aWeight = (1 - t) ** clampedStepScale;
     const bWeight = 1 - aWeight
     return aWeight * a + b * bWeight;
+    // when we interpolate 10%, we're asking to return 90% of the value
+    // that represents a step, if we wanna move 2 steps, we return 90% of the 90%, or 90%^2
+    // so the power of (1 - t) represents the step, we can use this to speed or slow the animation based on the framrate 
+    // to make it consistent on all screens
 }
 export function clamp(val: number, min: number, max: number): number {
     return Math.min(Math.max(val, min), max);
