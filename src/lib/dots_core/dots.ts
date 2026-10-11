@@ -56,7 +56,7 @@ function setupDotLoop() {
     window.addEventListener("mousemove", (e) => updateMousePositionInState(e, dotGridState))
     document.addEventListener("mouseenter", (e) => mouseEnterCallback(e, dotGridState));
     document.addEventListener("mouseleave", () => dotGridState.isMouseInScreen = false);
-    
+
     if (prefersReducedMotion) return;
     requestAnimationFrame((timestamp) => animationLoop(dotGridState, timestamp));
 }
@@ -139,15 +139,7 @@ function drawDot(context: CanvasRenderingContext2D, dot: Dot, scale: number = 1)
     context.arc(dot.x, dot.y, radius, 0, Math.PI * 2);
 }
 
-function setDotAlpha(smoothStep: number, state: DotGridState) {
-    const colorStrength = (1 - smoothStep) * state.strength;
-    state.context.globalAlpha = colorStrength;
-}
 
-function getDotScale(smoothStep: number, maxScaleIncrease: number = 1): number {
-    return 1 + (1 - smoothStep) * maxScaleIncrease;
-
-}
 
 function interpolateGlowPosition(state: DotGridState, stepScale: number) {
     const newXGlowPosition = interpolation(state.glow.x, state.mouse.x, DOT_GRID_CONFIG.easing, stepScale);

@@ -1,7 +1,8 @@
 import { setupCanvas, setupCanvasResolution } from "../utils/canvas";
-import { clamp, debounce } from "../utils/general";
+import { clamp, debounce, type position } from "../utils/general";
 
-type Dot = { x: number, y: number };
+type Dot = position;
+
 type CoreState = {
     canvas: HTMLCanvasElement
     context: CanvasRenderingContext2D
@@ -15,17 +16,18 @@ type CoreState = {
     requestFrame: RequestFrameFunction | null
 }
 
-type PublicCoreState = {
-    canvas: HTMLCanvasElement,
-    context: CanvasRenderingContext2D,
-    dots: Dot[][]
-}
-
 type GridSize = {
     columns: number
     rows: number
 }
 
+type WindowResizeCallback = (state: CoreState) => void;
+
+export type PublicCoreState = {
+    canvas: HTMLCanvasElement,
+    context: CanvasRenderingContext2D,
+    dots: Dot[][]
+}
 
 export type Effect = {
     setup: EffectSetupFunction,
@@ -34,10 +36,9 @@ export type Effect = {
     draw: (coreState: PublicCoreState) => void,
 }
 
-
 export type EffectSetupFunction = (requestFrame: RequestFrameFunction) => void;
-type WindowResizeCallback = (state: CoreState) => void;
-type RequestFrameFunction = () => void;
+export type RequestFrameFunction = () => void;
+
 
 const DOT_GRID_CONFIG = {
     spacing: 16,
@@ -112,8 +113,7 @@ function setupDots(gridSize: GridSize): Dot[][] {
     for (let i = 0; i < gridSize.rows; i++) {
         dots.push([])
         for (let j = 0; j < gridSize.columns; j++) {
-            const { x, y } = getDotDrawPosition(i, j, chunkSize);
-            const dot = { x: x, y: y };
+            const dot = getDotDrawPosition(i, j, chunkSize);
             dots[i].push(dot)
         }
     }
@@ -145,7 +145,7 @@ export function drawDot(context: CanvasRenderingContext2D, dot: Dot, scale: numb
     context.arc(dot.x, dot.y, radius, 0, Math.PI * 2);
 }
 
-function getDotDrawPosition(row: number, column: number, chunkSize: number): { x: number, y: number } {
+function getDotDrawPosition(row: number, column: number, chunkSize: number): position {
     return {
         x: column * chunkSize + chunkSize / 2,
         y: row * chunkSize + chunkSize / 2

@@ -1,3 +1,5 @@
+export type position = { x: number, y: number }
+
 export function debounce(func: Function, delay: number) {
     let timeout: number;
     return function (this: unknown, ...args: any) {
@@ -31,4 +33,8 @@ export function interpolation(a: number, b: number, t: number, stepScale: number
 }
 export function clamp(val: number, min: number, max: number): number {
     return Math.min(Math.max(val, min), max);
+}
+
+export function closeTo(x: number, y: number, tolerance: number) {
+    return Math.abs(x - y) < tolerance
 }
