@@ -1,5 +1,5 @@
 import { debounce, interpolation, smoothStep } from "./code_utils";
-import { setupCanvasResolution, resetCanvasSize } from "./window_utils";
+import { setupCanvasResolution } from "./canvas_utils";
 type Dot = { x: number, y: number };
 type DotGridState = {
     canvas: HTMLCanvasElement
@@ -21,7 +21,7 @@ type GridSize = {
 
 const DOT_GRID_CONFIG = {
     spacing: 16,
-    dotRadius: 1.5, // this means each chunk in the grid is 16 + 1.5 wide,
+    dotRadius: 1.5, // this means each chunk in the grid is 16 + 3 wide,
     glowRadius: 150,
     easing: 0.1,
     canvasId: "dot-canvas",
@@ -29,6 +29,7 @@ const DOT_GRID_CONFIG = {
 } as const;
 
 function setupDotLoop() {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const canvasData = setupCanvas();
     if (!canvasData) return;
     const { canvas, ctx } = canvasData;
@@ -49,11 +50,14 @@ function setupDotLoop() {
         isMouseInScreen: false,
         gridSize: setupGridSize(canvas)
     };
+    drawBaseDots(dotGridState);
     const debounceFunction = debounceDotRebuild(200);
     window.addEventListener("resize", () => debounceFunction(dotGridState));
     window.addEventListener("mousemove", (e) => updateMousePositionInState(e, dotGridState))
     document.addEventListener("mouseenter", (e) => mouseEnterCallback(e, dotGridState));
     document.addEventListener("mouseleave", () => dotGridState.isMouseInScreen = false);
+    
+    if (prefersReducedMotion) return;
     requestAnimationFrame((timestamp) => animationLoop(dotGridState, timestamp));
 }
 // fyi unused variables are dropped by tailwind. use @theme static to avoid that.
@@ -94,6 +98,8 @@ function setupDots(gridSize: GridSize): Dot[][] {
 
 function drawBaseDots(state: DotGridState) {
     const context = state.context;
+    context.fillStyle = state.baseColor;
+    context.globalAlpha = 1;
     context.beginPath();
     for (const row of state.dots) {
         for (const dot of row) {
@@ -101,7 +107,6 @@ function drawBaseDots(state: DotGridState) {
         }
     }
     context.fill();
-
 }
 
 function drawCloseDots(state: DotGridState) {
@@ -155,13 +160,10 @@ function interpolateGlowPosition(state: DotGridState, stepScale: number) {
 }
 
 
-
 function animationLoop(state: DotGridState, timestamp: number) {
     const { canvas, context: ctx } = state;
     const stepScale = getStepScale(timestamp);
-    state.context.fillStyle = state.baseColor;
-    state.context.globalAlpha = 1;
-
+    interpolateGlowPosition(state, stepScale);
     if (state.isMouseInScreen) {
         state.strength = interpolation(state.strength, 1, DOT_GRID_CONFIG.easing, stepScale);
     } else {
@@ -170,7 +172,6 @@ function animationLoop(state: DotGridState, timestamp: number) {
     // update then render
     ctx.clearRect(0, 0, canvas.width, canvas.height); //resetting canvas
     drawBaseDots(state);
-    interpolateGlowPosition(state, stepScale);
     drawCloseDots(state);
     requestAnimationFrame((timestamp) => animationLoop(state, timestamp))
 }
@@ -191,12 +192,13 @@ function setupGridSize(canvas: HTMLCanvasElement): GridSize {
 }
 
 function windowResizeCallback(state: DotGridState) {
-    resetCanvasSize(DOT_GRID_CONFIG.canvasId);
+    setupCanvasResolution(state.canvas, state.context);
     const gridSize = state.gridSize;
     const { rows, columns } = setupGridSize(state.canvas);
     gridSize.columns = columns;
     gridSize.rows = rows;
     state.dots = setupDots(gridSize);
+    drawBaseDots(state);
 }
 
 function mouseEnterCallback(mouse: MouseEvent, state: DotGridState) {
