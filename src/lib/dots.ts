@@ -10,6 +10,8 @@ type DotGridState = {
     strength: number // how strong the brightness is, 0 for initial
     accentColor: string
     baseColor: string
+    isMouseInScreen: boolean
+    gridSize: GridSize
 }
 
 type GridSize = {
@@ -22,32 +24,37 @@ const DOT_GRID_CONFIG = {
     dotRadius: 1.5, // this means each chunk in the grid is 16 + 1.5 wide,
     glowRadius: 150,
     easing: 0.1,
-    canvasId: "dot-canvas"
+    canvasId: "dot-canvas",
+    snapStrengthThreshold: 0.3
 } as const;
 
 function setupDotLoop() {
     const canvasData = setupCanvas();
-    if (canvasData) {
-        const { canvas, ctx } = canvasData;
-        setupCanvasResolution(canvas, ctx);
-        const gridSize = setupGridSize(canvas)
-        const dots = setupDots(gridSize);
-        const xCenter = window.innerWidth / 2;
-        const yCenter = window.innerHeight / 2;
-        const dotGridState: DotGridState = {
-            canvas: canvas,
-            context: ctx,
-            dots: dots,
-            mouse: { x: 0, y: 0 },
-            glow: { x: xCenter, y: yCenter },
-            strength: 0,
-            accentColor: getAccentColor(),
-            baseColor: getBaseColor(),
-        };
-        window.addEventListener("resize", () => debounceDotRebuild(dotGridState, gridSize, 200));
-        window.addEventListener("mousemove", (e) => updateMousePositionInState(e, dotGridState))
-        requestAnimationFrame((timestamp) => animationLoop(dotGridState, timestamp));
-    }
+    if (!canvasData) return;
+    const { canvas, ctx } = canvasData;
+    setupCanvasResolution(canvas, ctx);
+    const sizeGrid = setupGridSize(canvas);
+    const dots = setupDots(sizeGrid);
+    const xCenter = window.innerWidth / 2;
+    const yCenter = window.innerHeight / 2;
+    const dotGridState: DotGridState = {
+        canvas: canvas,
+        context: ctx,
+        dots: dots,
+        mouse: { x: 0, y: 0 },
+        glow: { x: xCenter, y: yCenter },
+        strength: 0,
+        accentColor: getAccentColor(),
+        baseColor: getBaseColor(),
+        isMouseInScreen: false,
+        gridSize: setupGridSize(canvas)
+    };
+    const debounceFunction = debounceDotRebuild(200);
+    window.addEventListener("resize", () => debounceFunction(dotGridState));
+    window.addEventListener("mousemove", (e) => updateMousePositionInState(e, dotGridState))
+    document.addEventListener("mouseenter", (e) => mouseEnterCallback(e, dotGridState));
+    document.addEventListener("mouseleave", () => dotGridState.isMouseInScreen = false);
+    requestAnimationFrame((timestamp) => animationLoop(dotGridState, timestamp));
 }
 // fyi unused variables are dropped by tailwind. use @theme static to avoid that.
 function getAccentColor() {
@@ -127,9 +134,8 @@ function drawDot(context: CanvasRenderingContext2D, dot: Dot, scale: number = 1)
     context.arc(dot.x, dot.y, radius, 0, Math.PI * 2);
 }
 
-// could be used for the strength
 function setDotAlpha(smoothStep: number, state: DotGridState) {
-    const colorStrength = 1 - smoothStep;
+    const colorStrength = (1 - smoothStep) * state.strength;
     state.context.globalAlpha = colorStrength;
 }
 
@@ -152,12 +158,19 @@ function interpolateGlowPosition(state: DotGridState, stepScale: number) {
 
 function animationLoop(state: DotGridState, timestamp: number) {
     const { canvas, context: ctx } = state;
-    //resetting canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const stepScale = getStepScale(timestamp);
     state.context.fillStyle = state.baseColor;
     state.context.globalAlpha = 1;
-    interpolateGlowPosition(state, getStepScale(timestamp));
+
+    if (state.isMouseInScreen) {
+        state.strength = interpolation(state.strength, 1, DOT_GRID_CONFIG.easing, stepScale);
+    } else {
+        state.strength = interpolation(state.strength, 0, DOT_GRID_CONFIG.easing, stepScale)
+    }
+    // update then render
+    ctx.clearRect(0, 0, canvas.width, canvas.height); //resetting canvas
     drawBaseDots(state);
+    interpolateGlowPosition(state, stepScale);
     drawCloseDots(state);
     requestAnimationFrame((timestamp) => animationLoop(state, timestamp))
 }
@@ -177,24 +190,31 @@ function setupGridSize(canvas: HTMLCanvasElement): GridSize {
     return { columns: columns, rows: rows };
 }
 
-function windowResizeCallback(state: DotGridState, gridSize: GridSize) {
+function windowResizeCallback(state: DotGridState) {
     resetCanvasSize(DOT_GRID_CONFIG.canvasId);
+    const gridSize = state.gridSize;
     const { rows, columns } = setupGridSize(state.canvas);
     gridSize.columns = columns;
     gridSize.rows = rows;
     state.dots = setupDots(gridSize);
 }
 
+function mouseEnterCallback(mouse: MouseEvent, state: DotGridState) {
+    state.isMouseInScreen = true;
+    state.mouse = { x: mouse.x, y: mouse.y };
+}
 
-function debounceDotRebuild(dotGridState: DotGridState, gridSize: GridSize, delay: number) {
+
+function debounceDotRebuild(delay: number) {
     const debounceWrapper = debounce(
         windowResizeCallback, delay
     );
-    debounceWrapper(dotGridState, gridSize)
+    return debounceWrapper;
 }
 
 function updateMousePositionInState(mouse: MouseEvent, dotGridState: DotGridState) {
     dotGridState.mouse = { x: mouse.x, y: mouse.y }
+    dotGridState.isMouseInScreen = true;
 }
 
 setupDotLoop();
