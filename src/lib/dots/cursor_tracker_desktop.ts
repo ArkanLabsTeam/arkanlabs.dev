@@ -1,4 +1,4 @@
-import { drawDot, setupCoreLoop, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
+import { setupCoreLoop, type DrawDotFunction, type EffectSetupFunction, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
 import { closeTo, interpolation, smoothStep, type position } from "../utils/general"
 
 type MainPageDesktopState = {
@@ -21,8 +21,9 @@ const GLOW_ANIMATION_CONFIG = {
 function setupMainLoop(): void {
     let abortController: AbortController;
     let mainState: MainPageDesktopState;
+    let drawDot: DrawDotFunction;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const setup = (requestFrame: RequestFrameFunction, coreState: PublicCoreState) => {
+    const setup: EffectSetupFunction = (requestFrame, drawDotFunction, drawLine, coreState: PublicCoreState) => {
         mainState = {
             mouse: { x: 0, y: 0 },
             glow: getScreenCenter(),
@@ -33,6 +34,7 @@ function setupMainLoop(): void {
             prefersReducedMotion
         }
         abortController = setupListeners(mainState);
+        drawDot = drawDotFunction;
     }
 
     const cleanup = () => {
@@ -58,7 +60,7 @@ function setupMainLoop(): void {
 
     const draw = (coreState: PublicCoreState) => {
         if (mainState.prefersReducedMotion) return;
-        drawCloseDots(mainState, coreState);
+        drawCloseDots(mainState, coreState, drawDot);
     }
 
     setupCoreLoop({
@@ -112,10 +114,10 @@ function getScreenCenter(): position {
 }
 
 // dots
-function drawCloseDots(state: MainPageDesktopState, coreState: PublicCoreState) {
+function drawCloseDots(state: MainPageDesktopState, coreState: PublicCoreState, draw: DrawDotFunction) {
     const context = coreState.context;
     context.fillStyle = state.accentColor;
-    for (const row of coreState.dots) {
+    for (const row of coreState.grid.dots) {
         for (const dot of row) {
             const glowCenterDotXDifference = (state.glow.x - dot.x);
             const glowCenterDotYDifference = (state.glow.y - dot.y);
@@ -126,7 +128,7 @@ function drawCloseDots(state: MainPageDesktopState, coreState: PublicCoreState) 
                 const smoothStepValue = smoothStep(distanceFromGlowCenter, 0, GLOW_ANIMATION_CONFIG.glowRadius);
                 const dotScale = getDotScale(smoothStepValue, 0.5);
                 setDotAlpha(smoothStepValue, state, coreState);
-                drawDot(context, dot, dotScale);
+                draw(dot, dotScale);
                 context.fill();
             }
         }

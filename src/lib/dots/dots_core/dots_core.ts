@@ -1,8 +1,6 @@
 import { setupCanvas, setupCanvasResolution } from "../../utils/canvas";
 import { clamp, debounce, type position } from "../../utils/general";
 
-type Dot = position;
-
 type CoreState = {
     canvas: HTMLCanvasElement
     context: CanvasRenderingContext2D
@@ -35,6 +33,8 @@ export type PublicCoreState = {
     context: CanvasRenderingContext2D,
     grid: Grid
 }
+
+export type Dot = position;
 
 export type Effect = {
     setup: EffectSetupFunction,

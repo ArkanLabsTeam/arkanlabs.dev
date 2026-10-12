@@ -1,4 +1,4 @@
-import { setupCoreLoop, type DrawDotFunction, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
+import { setupCoreLoop, type DrawDotFunction, type EffectSetupFunction, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
 import { closeTo, debounce, interpolation, smoothStep, type position } from "../utils/general"
 
 type MainPageDesktopState = {
@@ -21,7 +21,7 @@ function setupMainLoop(): void {
     let abortController: AbortController;
     let mainState: MainPageDesktopState;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const setup = (requestFrame: RequestFrameFunction, draw: DrawDotFunction, coreState: PublicCoreState) => {
+    const setup: EffectSetupFunction = (requestFrame, drawDot, drawLine, coreState) => {
         const leftOverRightSpace = getLeftOverSpaceWidth(coreState);
         const drawingAreaStart = getMainAreaWidth(); // this also is where the drawing area starts
         if (!leftOverRightSpace) return;
