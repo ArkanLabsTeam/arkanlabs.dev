@@ -47,10 +47,14 @@ export type Effect = {
 export type EffectSetupFunction = (
     requestFrame: RequestFrameFunction,
     draw: DrawDotFunction,
-    coreState: PublicCoreState
+    drawLineFunction: DrawLineFunction,
+    coreState: PublicCoreState,
 ) => void;
+
+
 export type RequestFrameFunction = () => void;
 export type DrawDotFunction = (dot: Dot, scale: number) => void;
+export type DrawLineFunction = (...dots: Dot[]) => void;
 
 const DOT_GRID_CONFIG = {
     spacing: 16,
@@ -73,6 +77,16 @@ export function setupCoreLoop(effect: Effect) {
         if (coreState.pendingFrame != null) return;
         coreState.pendingFrame = requestAnimationFrame((now) => coreLoop(coreState, now));
     };
+
+    const simplifiedDrawDotFunction: DrawDotFunction = (dot, scale = 1) => {
+        drawDot(ctx, dot, scale * coreState.grid.scale)
+    };
+
+
+    const simplifiedDrawLineFunction: DrawLineFunction = (...dots) => {
+        drawLine(ctx, ...dots);
+    }
+
     coreState = {
         canvas,
         context: ctx,
@@ -87,12 +101,13 @@ export function setupCoreLoop(effect: Effect) {
     setupCanvasResolution(canvas, ctx);
     coreState.abortController = createListeners(coreState);
 
+    effect.setup(
+        coreState.requestFrame,
+        simplifiedDrawDotFunction,
+        simplifiedDrawLineFunction,
+        coreState
+    );
 
-    const simplifiedDrawDotFunction = (dot: Dot, scale: number = 1) => {
-        drawDot(ctx, dot, scale * coreState.grid.scale)
-    }
-
-    effect.setup(coreState.requestFrame, simplifiedDrawDotFunction, coreState);
     coreState.requestFrame();
 }
 
@@ -189,6 +204,17 @@ function drawDot(context: CanvasRenderingContext2D, dot: Dot, scale: number = 1)
     context.arc(dot.x, dot.y, radius, 0, Math.PI * 2);
 }
 
+function drawLine(context: CanvasRenderingContext2D, ...dots: Dot[]) {
+    // thickness is control from context which can be done from the effect
+    for (let i = 1; i < dots.length; i++) {
+        const dot = dots[i];
+        const previosDot = dots[i - 1];
+        context.moveTo(previosDot.x, previosDot.y)
+        context.lineTo(dot.x, dot.y);
+    }
+}
+
+
 function getDotDrawPosition(row: number, column: number, cellSize: number): position {
     // this basically jumps to the start of the chunk 
     // then goes to the middle (where the dot should be)
@@ -229,8 +255,8 @@ const windowResizeCallback: WindowResizeCallback = (state) => {
     setupCanvasResolution(state.canvas, state.context);
     const grid = gridAndDotSetup(state.canvas);
     Object.assign(state.grid, grid);
-    state.currentEffect?.onResize?.(state);
-    state.requestFrame!();
+    state.currentEffect.onResize?.(state);
+    state.requestFrame();
 }
 
 // colors
