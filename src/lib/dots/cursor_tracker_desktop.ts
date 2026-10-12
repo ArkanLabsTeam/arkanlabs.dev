@@ -1,4 +1,4 @@
-import { drawDot, setupCoreLoop, type PublicCoreState, type RequestFrameFunction } from "../dots_core/dots_core";
+import { drawDot, setupCoreLoop, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
 import { closeTo, interpolation, smoothStep, type position } from "../utils/general"
 
 type MainPageDesktopState = {
@@ -22,7 +22,7 @@ function setupMainLoop(): void {
     let abortController: AbortController;
     let mainState: MainPageDesktopState;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const setup = (requestFrame: RequestFrameFunction) => {
+    const setup = (requestFrame: RequestFrameFunction, coreState: PublicCoreState) => {
         mainState = {
             mouse: { x: 0, y: 0 },
             glow: getScreenCenter(),
@@ -41,7 +41,6 @@ function setupMainLoop(): void {
 
     const update = (coreState: PublicCoreState, stepScale: number): boolean => {
         if (mainState.prefersReducedMotion) return false;
-        console.log(stepScale);
         interpolateGlowPosition(mainState, stepScale);
         updateStrengthBasedOnMousePosition(mainState, stepScale);
         const shouldRequestFrameForMousePresence = shouldRequestFrameForMouseWindowPresence(mainState);

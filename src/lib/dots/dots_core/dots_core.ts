@@ -1,5 +1,5 @@
-import { setupCanvas, setupCanvasResolution } from "../utils/canvas";
-import { clamp, debounce, type position } from "../utils/general";
+import { setupCanvas, setupCanvasResolution } from "../../utils/canvas";
+import { clamp, debounce, type position } from "../../utils/general";
 
 type Dot = position;
 
@@ -21,7 +21,7 @@ type GridSize = {
     rows: number
 }
 
-type WindowResizeCallback = (state: CoreState) => void;
+type WindowResizeCallback = (effect: Effect, state: CoreState) => void;
 
 export type PublicCoreState = {
     canvas: HTMLCanvasElement,
@@ -34,9 +34,10 @@ export type Effect = {
     cleanup: () => void,
     update: (coreState: PublicCoreState, timeScale: number) => boolean,
     draw: (coreState: PublicCoreState) => void,
+    onResize?: (coreState: PublicCoreState) => void,
 }
 
-export type EffectSetupFunction = (requestFrame: RequestFrameFunction) => void;
+export type EffectSetupFunction = (requestFrame: RequestFrameFunction, coreState: PublicCoreState) => void;
 export type RequestFrameFunction = () => void;
 
 
@@ -68,8 +69,8 @@ export function setupCoreLoop(effect: Effect) {
     }
     setupCanvasResolution(canvas, ctx);
     coreState.requestFrame = requestFrameWrapper(coreState);
-    coreState.abortController = createListeners(coreState);
-    effect.setup(coreState.requestFrame);
+    coreState.abortController = createListeners(effect, coreState);
+    effect.setup(coreState.requestFrame, coreState);
 
     coreState.requestFrame();
 }
@@ -166,11 +167,11 @@ function setupGridSize(canvas: HTMLCanvasElement): GridSize {
 
 
 // listeners setup area
-function createListeners(state: CoreState): AbortController {
+function createListeners(effect: Effect, state: CoreState): AbortController {
     const controller = new AbortController();
     const { signal } = controller;
     const debounceFunction = debounceDotRebuild(200);
-    window.addEventListener("resize", () => debounceFunction(state), { signal });
+    window.addEventListener("resize", () => debounceFunction(effect, state), { signal });
     return controller;
 }
 
@@ -182,13 +183,15 @@ function debounceDotRebuild(delay: number): WindowResizeCallback {
     return debounceWrapper;
 }
 
-function windowResizeCallback(state: CoreState) {
+const windowResizeCallback: WindowResizeCallback = (effect, state) => {
     setupCanvasResolution(state.canvas, state.context);
     const gridSize = state.gridSize;
     const { rows, columns } = setupGridSize(state.canvas);
     gridSize.columns = columns;
     gridSize.rows = rows;
     state.dots = setupDots(gridSize);
+
+    effect.onResize?.(state);
     state.requestFrame!();
 }
 

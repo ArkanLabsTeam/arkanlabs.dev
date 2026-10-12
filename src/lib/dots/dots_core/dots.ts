@@ -1,5 +1,5 @@
-import { debounce, interpolation, smoothStep } from "../utils/general";
-import { setupCanvasResolution } from "../utils/canvas";
+import { debounce, interpolation, smoothStep } from "../../utils/general";
+import { setupCanvasResolution } from "../../utils/canvas";
 type Dot = { x: number, y: number };
 type DotGridState = {
     canvas: HTMLCanvasElement
