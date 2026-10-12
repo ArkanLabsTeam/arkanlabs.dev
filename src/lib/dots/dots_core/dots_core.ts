@@ -7,12 +7,12 @@ type CoreState = {
     canvas: HTMLCanvasElement
     context: CanvasRenderingContext2D
     grid: Grid
-    currentEffect: Effect | null
+    currentEffect: Effect
     pendingFrame: number | null
     abortController: AbortController | null
     baseColor: string
     previousLoopRun: number | null
-    requestFrame: RequestFrameFunction | null,
+    requestFrame: RequestFrameFunction,
 }
 
 type Grid = {
@@ -63,11 +63,17 @@ const DOT_GRID_CONFIG = {
 
 
 export function setupCoreLoop(effect: Effect) {
+    let coreState: CoreState;
     const canvasSetup = setupCanvas(DOT_GRID_CONFIG.canvasId);
     if (canvasSetup == null) return;
     const { canvas, ctx } = canvasSetup;
     const grid = gridAndDotSetup(canvas)
-    const coreState: CoreState = {
+
+    const requestFrame = () => {
+        if (coreState.pendingFrame != null) return;
+        coreState.pendingFrame = requestAnimationFrame((now) => coreLoop(coreState, now));
+    };
+    coreState = {
         canvas,
         context: ctx,
         grid: grid,
@@ -76,10 +82,9 @@ export function setupCoreLoop(effect: Effect) {
         abortController: null,
         baseColor: getBaseColor(),
         previousLoopRun: null,
-        requestFrame: null,
+        requestFrame: requestFrame
     }
     setupCanvasResolution(canvas, ctx);
-    coreState.requestFrame = requestFrameWrapper(coreState);
     coreState.abortController = createListeners(coreState);
 
 
@@ -89,13 +94,6 @@ export function setupCoreLoop(effect: Effect) {
 
     effect.setup(coreState.requestFrame, simplifiedDrawDotFunction, coreState);
     coreState.requestFrame();
-}
-
-function requestFrameWrapper(coreState: CoreState) {
-    return () => {
-        if (coreState.pendingFrame != null) return;
-        coreState.pendingFrame = requestAnimationFrame((now) => coreLoop(coreState, now));
-    }
 }
 
 function coreLoop(coreState: CoreState, now: number) {
@@ -112,13 +110,13 @@ function coreLoop(coreState: CoreState, now: number) {
     drawBaseDots(coreState);
     coreState.currentEffect?.draw(coreState);
     if (needsUpdate) {
-        coreState.requestFrame!();
+        coreState.requestFrame();
     }
 }
 
 function getStepScale(elapsedTime: number): number {
-    const ms_per_frame_at_60fps = 16.7; // ms
-    return clamp(elapsedTime / ms_per_frame_at_60fps, 0, 4); // basically how much we should move, so on slower or faster screens it doesn't change speed
+    const msPerFrameAt60Fps = 16.7; // ms
+    return clamp(elapsedTime / msPerFrameAt60Fps, 0, 4); // basically how much we should move, so on slower or faster screens it doesn't change speed
 }
 
 
@@ -156,12 +154,12 @@ function getGridScale(): number {
 
     const windowWidth = window.innerWidth;
     const horizontalScale = windowWidth / DOT_GRID_CONFIG.defaultHorizontalResolution;
+
     // phones are much taller than wide so we need the smaller scale 
     // (which mean biggest difference from base)
     const smallerScale = Math.min(horizontalScale, verticalScale);
-    const clampedScale = clamp(smallerScale, Math.min(...scaleSteps), 1);
-    const steppedScale = scaleSteps.find((n) => n <= clampedScale);
-    return steppedScale!; // has to be between 0.65 and 1.
+    const steppedScale = scaleSteps.find((n) => n <= smallerScale);
+    return steppedScale ?? scaleSteps[scaleSteps.length - 1]; // has to be between 0.65 and 1.
 }
 
 function getCellSize(gridScale: number): number {
@@ -185,27 +183,27 @@ function drawBaseDots(state: CoreState) {
 
 function drawDot(context: CanvasRenderingContext2D, dot: Dot, scale: number = 1) {
     const radius = DOT_GRID_CONFIG.dotRadius * scale;
-    context.moveTo(dot.x + radius, dot.y);
     // it starts drawing from the starting radius, 
     // so we need to move by radius.
+    context.moveTo(dot.x + radius, dot.y);
     context.arc(dot.x, dot.y, radius, 0, Math.PI * 2);
 }
 
 function getDotDrawPosition(row: number, column: number, cellSize: number): position {
+    // this basically jumps to the start of the chunk 
+    // then goes to the middle (where the dot should be)
     return {
         x: column * cellSize + cellSize / 2,
         y: row * cellSize + cellSize / 2
     }
-    // this basically jumps to the start of the chunk 
-    // then goes to the middle (where the dot should be)
 }
 
 
 function setupGridSize(canvas: HTMLCanvasElement, cellSize: number): GridSize {
     const { width, height } = canvas.getBoundingClientRect();
+    // floor works but could cause some empty space at the bottom
     const columns = Math.ceil(width / cellSize);
     const rows = Math.ceil(height / cellSize);
-    // floor works but could cause some empty space at the bottom
     return { columns, rows };
 }
 
