@@ -1,0 +1,50 @@
+---
+import BaseLayout from "../layout/BaseLayout.astro";
+import DotGrid from "../components/DotGrid.astro";
+---
+
+<BaseLayout title="Draw · Arkan Labs">
+	<DotGrid />
+	<div
+		class="fixed right-4 bottom-4 rounded-md border border-border bg-surface px-3 py-2 font-mono text-sm text-muted select-none"
+	>
+		Drawing width: <span id="drawing-width" class="text-accent-bright">0px</span>
+	</div>
+
+	<button
+		id="draw-panel-toggle"
+		type="button"
+		aria-controls="draw-panel"
+		aria-expanded="false"
+		class="fixed bottom-4 left-4 z-20 rounded-md border border-border bg-surface px-3 py-2 font-mono text-sm text-muted transition-colors hover:text-text"
+	>
+		Settings
+	</button>
+
+	<aside
+		id="draw-panel"
+		hidden
+		class="fixed bottom-16 left-4 z-20 max-h-[calc(100dvh-10rem)] w-xl max-w-[calc(100vw-2rem)] overflow-y-auto rounded-md border border-border bg-surface p-4 font-mono text-sm text-text"
+	>
+		<div class="mb-4 flex items-center justify-between">
+			<h2 class="text-xs uppercase tracking-wider text-muted">Drawing settings</h2>
+			<button
+				id="draw-panel-reset"
+				type="button"
+				class="text-xs text-accent-bright hover:underline"
+			>
+				Reset
+			</button>
+		</div>
+		<div id="draw-panel-body" class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2"></div>
+	</aside>
+
+	<script src="../lib/dots/draw.ts"></script>
+</BaseLayout>
+
+<style is:global>
+	body {
+		touch-action: none;
+		user-select: none;
+	}
+</style>
