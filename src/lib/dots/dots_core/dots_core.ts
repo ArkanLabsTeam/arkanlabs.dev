@@ -1,5 +1,5 @@
 import { setupCanvas, setupCanvasResolution } from "../../utils/canvas";
-import { clamp, debounce, type position } from "../../utils/general";
+import { clamp, debounce, type Position } from "../../utils/general";
 
 type CoreState = {
     canvas: HTMLCanvasElement
@@ -34,7 +34,7 @@ export type PublicCoreState = {
     grid: Grid
 }
 
-export type Dot = position;
+export type Dot = Position;
 
 export type Effect = {
     setup: EffectSetupFunction,
@@ -57,7 +57,7 @@ export type DrawDotFunction = (dot: Dot, scale: number) => void;
 export type DrawLineFunction = (...dots: Dot[]) => void;
 
 const DOT_GRID_CONFIG = {
-    spacing: 16,
+    spacing: 16, // this basically means 8 per side, since the size is spacing + diameter
     dotRadius: 1.5, // this means each chunk in the grid is 16 + 3 wide,
     canvasId: "dot-canvas",
     defaultVerticalResolution: 1080,
@@ -215,7 +215,7 @@ function drawLine(context: CanvasRenderingContext2D, ...dots: Dot[]) {
 }
 
 
-function getDotDrawPosition(row: number, column: number, cellSize: number): position {
+function getDotDrawPosition(row: number, column: number, cellSize: number): Position {
     // this basically jumps to the start of the chunk 
     // then goes to the middle (where the dot should be)
     return {

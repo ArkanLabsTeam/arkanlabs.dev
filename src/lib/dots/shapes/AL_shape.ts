@@ -1,6 +1,6 @@
-import { Brightness } from "./shape_utils";
+import { Brightness, type Shape } from "./shape_utils";
 
-export const alShape = {
+export const alShape: Shape = {
     sizeRequiredInDots: [26, 17], // max coords + 1 since the index is form 0
     segments: [
         {

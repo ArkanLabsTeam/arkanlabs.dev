@@ -1,4 +1,4 @@
-export type position = { x: number, y: number }
+export type Position = { x: number, y: number }
 
 export function debounce(func: Function, delay: number) {
     let timeout: number;

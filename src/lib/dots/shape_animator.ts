@@ -1,5 +1,7 @@
 import { setupCoreLoop, type DrawDotFunction, type EffectSetupFunction, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
-import { closeTo, debounce, interpolation, smoothStep, type position } from "../utils/general"
+import { closeTo, debounce, interpolation, smoothStep, type Position } from "../utils/general"
+import { getShapeHeight, getShapeWidth, type Shape } from "./shapes/shape_utils";
+import { alShape } from "./shapes/AL_shape";
 
 type MainPageDesktopState = {
     accentColor: string,
@@ -9,15 +11,15 @@ type MainPageDesktopState = {
     drawingAreaStart: number | null
 }
 
-const AL_LETTERS_CONFIG = {
+const SHAPE_DRAWING_CONFIG = {
     easing: 0.1,
     snapStrengthThreshold: 0.1,
     glowRadius: 150,
     mainAreaId: "main-space",
-    horizontalPadding: 10
+    horizontalPadding: 10 // 5 per side
 } as const;
 
-function setupMainLoop(): void {
+function setupMainLoop(shape: Shape): void {
     let abortController: AbortController;
     let mainState: MainPageDesktopState;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -33,6 +35,7 @@ function setupMainLoop(): void {
             drawingAreaStart
         }
         abortController = setupListeners(mainState);
+
     }
 
     const cleanup = () => {
@@ -54,8 +57,8 @@ function setupMainLoop(): void {
         if (!leftOverSpace) return;
 
         // if left over is null this is too, we can do ! safely
-        mainState.drawingAreaStart = mainAreaWidth! + AL_LETTERS_CONFIG.horizontalPadding;
-        mainState.paddedRightSpace = leftOverSpace - AL_LETTERS_CONFIG.horizontalPadding;
+        mainState.drawingAreaStart = mainAreaWidth! + SHAPE_DRAWING_CONFIG.horizontalPadding;
+        mainState.paddedRightSpace = leftOverSpace - SHAPE_DRAWING_CONFIG.horizontalPadding;
     };
 
     setupCoreLoop({
@@ -68,15 +71,49 @@ function setupMainLoop(): void {
 
 }
 
-setupMainLoop(); // you would wanna build a chooser file
+setupMainLoop(alShape); // you would wanna build a chooser file
 
 
 // canvas
+/**
+ * It must be known this function and most others in the Dot engine 
+ * depend on the canvas taking up the entire width and height of the screen
+ */
+function getShapeDrawAreaStart(shape: Shape, coreState: PublicCoreState) {
+    const mainAreaWidth = getMainAreaWidth();
+    const shapeWidth = getShapeWidth(shape, coreState.grid.cellSize);
+
+    const paddedWidth = shapeWidth + SHAPE_DRAWING_CONFIG.horizontalPadding;
+    const drawingAreaWidth = getLeftOverSpaceWidth(coreState);
+    if (!drawingAreaWidth || !mainAreaWidth) return;
+
+    const canDrawInDrawingArea = paddedWidth >= drawingAreaWidth;
+    const drawingAreaCenter = mainAreaWidth + drawingAreaWidth / 2;
+    const canvasCenter = getCanvasCenterShiftedForShape(shape, coreState);
+    return canDrawInDrawingArea ? drawingAreaCenter : canvasCenter;
+}
+
+function getCanvasCenterShiftedForShape(shape: Shape, coreState: PublicCoreState) {
+    const cellSize = coreState.grid.cellSize;
+
+    const canvasHeight = coreState.canvas.getBoundingClientRect().height;
+    const shapeHeight = getShapeHeight(shape, cellSize);
+    const drawingCenterVertical = canvasHeight - shapeHeight / 2;
+
+    const canvasWidth = coreState.canvas.getBoundingClientRect().width;
+    const shapeWidth = getShapeWidth(shape, cellSize);
+    const drawingCenterHorizontal = canvasWidth - shapeWidth / 2;
+
+    return { width: drawingCenterHorizontal, height: drawingCenterVertical }
+}
+
 function getMainAreaWidth() {
-    const element = document.getElementById(AL_LETTERS_CONFIG.mainAreaId);
+    const element = document.getElementById(SHAPE_DRAWING_CONFIG.mainAreaId);
     const pageWidth = element?.getBoundingClientRect().width ?? null;
     return pageWidth;
 }
+
+
 
 
 function getLeftOverSpaceWidth(coreState: PublicCoreState) {
