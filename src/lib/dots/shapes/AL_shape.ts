@@ -1,7 +1,10 @@
 import { Brightness, type Shape } from "./shape_utils";
 
 export const alShape: Shape = {
-    sizeRequiredInDots: [26, 17], // max coords + 1 since the index is form 0
+    sizeRequiredInDots: {
+        width: 26,
+        height: 17
+    }, // max coords + 1 since the index is form 0
     segments: [
         {
             dot1: {

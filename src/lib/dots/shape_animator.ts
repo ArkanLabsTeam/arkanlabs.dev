@@ -3,12 +3,11 @@ import { closeTo, debounce, interpolation, smoothStep, type Position } from "../
 import { getShapeHeight, getShapeWidth, type Shape } from "./shapes/shape_utils";
 import { alShape } from "./shapes/AL_shape";
 
-type MainPageDesktopState = {
+type ShapeDrawerState = {
     accentColor: string,
     requestFrame: RequestFrameFunction
     prefersReducedMotion: boolean
-    paddedRightSpace: number // currently useless but could be used to change size of text
-    drawingAreaStart: number | null
+    drawingAreaStart: Position
 }
 
 const SHAPE_DRAWING_CONFIG = {
@@ -21,17 +20,16 @@ const SHAPE_DRAWING_CONFIG = {
 
 function setupMainLoop(shape: Shape): void {
     let abortController: AbortController;
-    let mainState: MainPageDesktopState;
+    let mainState: ShapeDrawerState;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const setup: EffectSetupFunction = (requestFrame, drawDot, drawLine, coreState) => {
-        const leftOverRightSpace = getLeftOverSpaceWidth(coreState);
-        const drawingAreaStart = getMainAreaWidth(); // this also is where the drawing area starts
-        if (!leftOverRightSpace) return;
+        const drawingAreaStart = getShapeDrawAreaStart(shape, coreState);
+        if (!drawingAreaStart) return;
+
         mainState = {
             accentColor: getAccentColor(),
             requestFrame,
             prefersReducedMotion,
-            paddedRightSpace: leftOverRightSpace,
             drawingAreaStart
         }
         abortController = setupListeners(mainState);
@@ -53,12 +51,11 @@ function setupMainLoop(shape: Shape): void {
 
     const onResize = (coreState: PublicCoreState) => {
         const leftOverSpace = getLeftOverSpaceWidth(coreState);
-        const mainAreaWidth = getMainAreaWidth();
-        if (!leftOverSpace) return;
+        const drawingAreaStart = getShapeDrawAreaStart(shape, coreState);
+        if (!leftOverSpace || !drawingAreaStart) return;
 
         // if left over is null this is too, we can do ! safely
-        mainState.drawingAreaStart = mainAreaWidth! + SHAPE_DRAWING_CONFIG.horizontalPadding;
-        mainState.paddedRightSpace = leftOverSpace - SHAPE_DRAWING_CONFIG.horizontalPadding;
+        mainState.drawingAreaStart = drawingAreaStart;
     };
 
     setupCoreLoop({
@@ -79,18 +76,25 @@ setupMainLoop(alShape); // you would wanna build a chooser file
  * It must be known this function and most others in the Dot engine 
  * depend on the canvas taking up the entire width and height of the screen
  */
-function getShapeDrawAreaStart(shape: Shape, coreState: PublicCoreState) {
+function getShapeDrawAreaStart(shape: Shape, coreState: PublicCoreState): Position | null {
     const mainAreaWidth = getMainAreaWidth();
     const shapeWidth = getShapeWidth(shape, coreState.grid.cellSize);
 
     const paddedWidth = shapeWidth + SHAPE_DRAWING_CONFIG.horizontalPadding;
     const drawingAreaWidth = getLeftOverSpaceWidth(coreState);
-    if (!drawingAreaWidth || !mainAreaWidth) return;
+
+    if (drawingAreaWidth === null || mainAreaWidth === null) return null;
 
     const canDrawInDrawingArea = paddedWidth >= drawingAreaWidth;
-    const drawingAreaCenter = mainAreaWidth + drawingAreaWidth / 2;
     const canvasCenter = getCanvasCenterShiftedForShape(shape, coreState);
-    return canDrawInDrawingArea ? drawingAreaCenter : canvasCenter;
+    const drawingAreaCenterVertical = canvasCenter.y;
+    const drawingAreaCenterHorizontal = mainAreaWidth - drawingAreaWidth / 2;
+        
+    const drwaingAreaCenter = {
+        x: drawingAreaCenterHorizontal,
+        y: drawingAreaCenterVertical
+    }
+    return canDrawInDrawingArea ? drwaingAreaCenter : canvasCenter;
 }
 
 function getCanvasCenterShiftedForShape(shape: Shape, coreState: PublicCoreState) {
@@ -102,9 +106,10 @@ function getCanvasCenterShiftedForShape(shape: Shape, coreState: PublicCoreState
 
     const canvasWidth = coreState.canvas.getBoundingClientRect().width;
     const shapeWidth = getShapeWidth(shape, cellSize);
+    
     const drawingCenterHorizontal = canvasWidth - shapeWidth / 2;
 
-    return { width: drawingCenterHorizontal, height: drawingCenterVertical }
+    return { x: drawingCenterHorizontal, y: drawingCenterVertical }
 }
 
 function getMainAreaWidth() {
@@ -118,7 +123,7 @@ function getMainAreaWidth() {
 
 function getLeftOverSpaceWidth(coreState: PublicCoreState) {
     const pageWidth = getMainAreaWidth();
-    if (!pageWidth) return;
+    if (!pageWidth) return null;
     const canvasWidth = coreState.canvas.getBoundingClientRect().width;
     return canvasWidth - pageWidth;
 }
@@ -134,7 +139,7 @@ function getAccentColor() {
 }
 
 //listeners 
-function setupListeners(state: MainPageDesktopState): AbortController {
+function setupListeners(state: ShapeDrawerState): AbortController {
     const controller = new AbortController();
     const { signal } = controller;
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -146,7 +151,7 @@ function setupListeners(state: MainPageDesktopState): AbortController {
     return controller;
 }
 
-function updatePreferReducedMotion(e: MediaQueryListEvent, dotGridState: MainPageDesktopState) {
+function updatePreferReducedMotion(e: MediaQueryListEvent, dotGridState: ShapeDrawerState) {
     dotGridState.prefersReducedMotion = e.matches
     dotGridState.requestFrame();
 }

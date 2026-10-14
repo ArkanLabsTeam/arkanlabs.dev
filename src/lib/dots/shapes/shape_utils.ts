@@ -1,6 +1,5 @@
 import { number } from "astro:schema"
 import type { Dot } from "../dots_core/dots_core"
-import type { Position } from "../../utils/general"
 
 export enum Brightness {
     dim, bright
