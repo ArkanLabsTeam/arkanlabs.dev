@@ -1,0 +1,10 @@
+---
+import Section from "./Section.astro";
+
+const { title, eyebrowTitle, bodyText } = Astro.props;
+
+---
+
+<Section title={title} eyebrowTitle={eyebrowTitle}>
+    <p class="pt-4">{bodyText}</p>
+</Section>

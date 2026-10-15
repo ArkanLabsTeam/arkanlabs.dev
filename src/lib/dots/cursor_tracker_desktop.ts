@@ -1,9 +1,9 @@
 import { setupCoreLoop, type DrawDotFunction, type EffectSetupFunction, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
-import { closeTo, interpolation, smoothStep, type position } from "../utils/general"
+import { closeTo, interpolation, smoothStep, type Position } from "../utils/general"
 
 type MainPageDesktopState = {
-    mouse: position,
-    glow: position,
+    mouse: Position,
+    glow: Position,
     strength: number,
     accentColor: string,
     isMouseInScreen: boolean,
@@ -107,7 +107,7 @@ function shouldRequestFrameForMouseWindowPresence(mainState: MainPageDesktopStat
 
 
 // canvas
-function getScreenCenter(): position {
+function getScreenCenter(): Position {
     const x = window.innerWidth / 2;
     const y = window.innerHeight / 2;
     return { x, y }

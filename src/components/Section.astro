@@ -1,0 +1,11 @@
+---
+import SectionEyebrow from "./SectionEyebrow.astro";
+
+const { title, eyebrowTitle} = Astro.props;
+---
+
+<section class="border-border border-2 md:rounded-md p-4 bg-surface">
+    <SectionEyebrow title={eyebrowTitle} />
+    <h1 class="md:text-2xl text-xl">{title}</h1>
+    <slot />
+</section>

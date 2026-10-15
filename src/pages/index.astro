@@ -1,10 +1,26 @@
 ---
 import BaseLayout from "../layout/BaseLayout.astro";
 import DotGrid from "../components/DotGrid.astro";
+import TextSection from "../components/TextSection.astro";
+const aboutUsSectionData = {
+	title: "A Result of the AI Takeover",
+	eyebrowTitle: "01 / ABOUT",
+	bodyText: "kjszxfdhgkjvhdszgbyujfvbdshjvjyhdsfgvbuiydsfvyudsfvbuvfd"
+} as const;
+
+const sections = [aboutUsSectionData] as const;
 ---
 
 <BaseLayout title="Home Page · Arkan Labs">
 	<DotGrid />
-	YES
+	{
+		sections.map((section) => (
+			<TextSection
+				title={section.title}
+				eyebrowTitle={section.eyebrowTitle}
+				bodyText={section.bodyText}
+			/>
+		))
+	}
 	<script src="../lib/dots/shape_animator.ts"></script>
 </BaseLayout>
