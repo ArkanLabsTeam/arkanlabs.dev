@@ -17,6 +17,7 @@ export function debounce(func: Function, delay: number) {
 
 
 export function smoothStep(x: number, min: number, max: number) {
+    // returns 1 if >= max and 0 if <= min
     if (min == max) {
         throw RangeError("Cant have min and max equal")
     }

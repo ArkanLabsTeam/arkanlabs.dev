@@ -44,10 +44,16 @@ export type Effect = {
     onResize?: (coreState: PublicCoreState) => void,
 }
 
+/**
+ * @param {RequestFrameFunction} requestFrame - Function used to request a frame
+ * @param {DrawDotFunction} draw - Dot drawing function that takes global coordinates not grid coordinates
+ * @param {DrawLineFunction} drawLine - Line Drawing function that takes global coordinates not grid coordinates
+ * @param {PublicCoreState} coreState - State object provided by the core drawing engine
+ */
 export type EffectSetupFunction = (
     requestFrame: RequestFrameFunction,
     draw: DrawDotFunction,
-    drawLineFunction: DrawLineFunction,
+    drawLine: DrawLineFunction,
     coreState: PublicCoreState,
 ) => void;
 
@@ -77,7 +83,7 @@ export function setupCoreLoop(effect: Effect) {
         if (coreState.pendingFrame != null) return;
         coreState.pendingFrame = requestAnimationFrame((now) => coreLoop(coreState, now));
     };
-
+    
     const simplifiedDrawDotFunction: DrawDotFunction = (dot, scale = 1) => {
         drawDot(ctx, dot, scale * coreState.grid.scale)
     };
