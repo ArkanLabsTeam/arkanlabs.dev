@@ -1,10 +1,13 @@
 ---
 import Section from "./Section.astro";
 
-const { title, eyebrowTitle, bodyText } = Astro.props;
-
+const { title, eyebrowTitle, segments } = Astro.props;
 ---
 
 <Section title={title} eyebrowTitle={eyebrowTitle}>
-    <p class="pt-4">{bodyText}</p>
+    {
+        segments.map((seg: string, index: number, ) => {
+            return <p class="pt-4">{seg}</p>;
+        })
+    }
 </Section>
