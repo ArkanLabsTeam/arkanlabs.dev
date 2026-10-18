@@ -8,7 +8,7 @@ export const homeTextSections = [
 	it became clear that a lot of people (including us) were missing original,
 	soulful and honest work.`,
 
-            `Our first released project is Rihla, 
+            `Our first project is Rihla, 
 	a Jordanian ride sharing application that university 
 	students use to get from their houses to their universities.
 	For the future we plan on releasing optimized games 
