@@ -8,6 +8,9 @@ export const homeTextSections = [
 	it became clear that a lot of people (including us) were missing original,
 	soulful and honest work.`,
 
+            `We are a Muslim team, we strive to give a comfortable experience for all people while 
+    staying true to our values by building our products with Sharia compliance in mind.`,
+
             `Our first project is Rihla, 
 	a Jordanian ride sharing application that university 
 	students use to get from their houses to their universities.
