@@ -1,0 +1,18 @@
+---
+import type { HomeTimelineSection } from "../data/types";
+import Section from "./Section.astro";
+
+type Props = {
+    section: HomeTimelineSection;
+};
+
+const { section } = Astro.props;
+---
+
+<Section>
+    {
+        section.segments.map((seg: string, index: number) => {
+            return <p class="pt-4">{seg}</p>;
+        })
+    }
+</Section>

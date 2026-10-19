@@ -1,4 +1,6 @@
-export const homeProjectSection = [
+import type { HomeTimelineSection } from "./types";
+
+export let homeProjectSection: HomeTimelineSection[] = [
     {
         title: "Comfortable and Affordable Rides",
         eyebrowTitle: "02 / RIHLA",
@@ -17,6 +19,16 @@ export const homeProjectSection = [
             These filters can't be disabled, as Rihla was built on values we truly care about. 
             Rihla also protects your anonymity by hiding your contact information and name from the other riders. 
             We disclose your name to the driver and temporarily disclose your phone number on their arrival to your pickup location.`
-        ]
+        ],
+        timeline: {
+            progressIndex: 1,
+            milestones: [
+                "Closed Alpha Testing",
+                "Open Beta at Al-Huson University",
+                "Full Release at All Irbid Universities",
+                "Group Rides",
+                "iOS Release",
+            ]
+        }
     }
-];
+] as const;

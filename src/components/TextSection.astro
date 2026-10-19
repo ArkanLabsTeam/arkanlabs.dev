@@ -1,12 +1,18 @@
 ---
+import type { HomeTextSection } from "../data/types";
 import Section from "./Section.astro";
 
-const { title, eyebrowTitle, segments } = Astro.props;
+type Props = {
+    section: HomeTextSection
+}
+
+
+const { section } = Astro.props;
 ---
 
-<Section title={title} eyebrowTitle={eyebrowTitle}>
+<Section title={section.title} eyebrowTitle={section.eyebrowTitle}>
     {
-        segments.map((seg: string, index: number, ) => {
+        section.segments.map((seg: string, index: number, ) => {
             return <p class="pt-4">{seg}</p>;
         })
     }

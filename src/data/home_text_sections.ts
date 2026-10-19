@@ -1,4 +1,6 @@
-export const homeTextSections = [
+import type { HomeTextSection } from "./types";
+
+export const homeTextSections: HomeTextSection[] = [
     {
         title: "Our Love for the Craft",
         eyebrowTitle: "01 / ABOUT",
