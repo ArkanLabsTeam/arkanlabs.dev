@@ -1,6 +1,7 @@
 ---
 import type { HomeTimelineSection } from "../data/types";
 import Section from "./Section.astro";
+import TimelineMarker, { type MilestoneVariant } from "./TimelineMarker.astro";
 
 type Props = {
     section: HomeTimelineSection;
@@ -8,6 +9,17 @@ type Props = {
 };
 
 const { section, class: className } = Astro.props;
+const progressIndex = section.timeline.progressIndex;
+
+function getVariant(index: number): MilestoneVariant {
+    if (progressIndex >= index) {
+        return "done";
+    } else if (progressIndex + 1 === index) {
+        return "wip"
+    } else {
+        return "upcoming"
+    }
+}
 ---
 
 <Section title={section.title} eyebrowTitle={section.eyebrowTitle} class={className}>
@@ -19,4 +31,11 @@ const { section, class: className } = Astro.props;
     }
     </div>
     
+    <ol class="pt-4">
+        {
+            section.timeline.milestones.map((ms: string, index: number) => {
+                return <TimelineMarker variant={getVariant(index)} label={ms}/>
+            })
+        }
+    </ol>
 </Section>
