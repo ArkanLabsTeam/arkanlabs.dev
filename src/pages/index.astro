@@ -3,16 +3,21 @@ import BaseLayout from "../layout/BaseLayout.astro";
 import DotGrid from "../components/DotGrid.astro";
 import TextSection from "../components/TextSection.astro";
 import { homeTextSections } from "../data/home_text_sections";
+import { homeTimelineSections } from "../data/home_timeline_sections";
+import TimelineSection from "../components/TimelineSection.astro";
 ---
 
 <BaseLayout title="Home Page · Arkan Labs">
 	<DotGrid />
-	{
-		homeTextSections.map((section) => (
-			<TextSection
-				section={section}
-			/>
-		))
-	}
+	<div class="mb-80 lg:mb-10">
+		{homeTextSections.map((section) => <TextSection section={section} />)}
+	</div>
+	<div class="mb-80 lg:mb-10">
+		{
+			homeTimelineSections.map((section) => (
+				<TimelineSection section={section} />
+			))
+		}
+	</div>
 	<script src="../lib/dots/shape_animator.ts"></script>
 </BaseLayout>

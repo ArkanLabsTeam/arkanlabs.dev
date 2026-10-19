@@ -4,15 +4,19 @@ import Section from "./Section.astro";
 
 type Props = {
     section: HomeTimelineSection;
+    class?: string;
 };
 
-const { section } = Astro.props;
+const { section, class: className } = Astro.props;
 ---
 
-<Section>
-    {
+<Section title={section.title} eyebrowTitle={section.eyebrowTitle} class={className}>
+    <div class="border-border border-b-2 pb-4">
+        {
         section.segments.map((seg: string, index: number) => {
-            return <p class="pt-4">{seg}</p>;
+            return <p class="pt-4 list:b-1">{seg}</p>;
         })
     }
+    </div>
+    
 </Section>

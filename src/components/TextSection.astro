@@ -3,14 +3,15 @@ import type { HomeTextSection } from "../data/types";
 import Section from "./Section.astro";
 
 type Props = {
-    section: HomeTextSection
+    section: HomeTextSection,
+    class?: string
 }
 
 
-const { section } = Astro.props;
+const { section, class: className } = Astro.props;
 ---
 
-<Section title={section.title} eyebrowTitle={section.eyebrowTitle}>
+<Section title={section.title} eyebrowTitle={section.eyebrowTitle} class={className}>
     {
         section.segments.map((seg: string, index: number, ) => {
             return <p class="pt-4">{seg}</p>;
