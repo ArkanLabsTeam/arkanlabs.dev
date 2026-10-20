@@ -30,8 +30,7 @@ function getVariant(index: number): MilestoneVariant {
         })
     }
     </div>
-    
-    <ol class="pt-4">
+    <ol class="pt-4 lg:flex"> 
         {
             section.timeline.milestones.map((ms: string, index: number) => {
                 return <TimelineMarker variant={getVariant(index)} label={ms}/>

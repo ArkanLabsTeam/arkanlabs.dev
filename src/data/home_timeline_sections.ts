@@ -25,7 +25,7 @@ export let homeTimelineSections: HomeTimelineSection[] = [
             progressIndex: 1,
             milestones: [
                 "Closed Alpha Testing",
-                "Open Beta at Al-Huson University",
+                "Open Beta at Al‑Huson University",
                 "Full Release at All Irbid Universities",
                 "Group Rides",
                 "iOS Release",

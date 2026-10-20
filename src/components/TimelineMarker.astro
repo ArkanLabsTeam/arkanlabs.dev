@@ -20,25 +20,35 @@ const { variant, label } = Astro.props as {
 const classesSharedBetweenWipAndPulse = [
     "absolute rounded-full -translate-x-1/2 left-0 size-5",
     "-translate-y-1/2 top-7", // top 7 is 16 (top) + 12 (half line height)
+    "lg:top-0 lg:left-1/2",
     CIRCLE_VARIANT_CLASSES[variant],
 ];
 ---
 
-<li class:list={["ml-2 pl-2 py-4 relative group"]}>
+<li class:list={["ml-2 pl-2 py-4 relative group lg:flex-1 lg:mt-4"]}>
     <span
         class:list={[
             "absolute w-1 h-full top-7 left-0 -translate-x-1/2",
             "group-last:h-0",
+            "lg:h-1 lg:w-full lg:top-0 lg:left-0 lg:translate-x-1/2 lg:-translate-y-1/2",
             LINE_VARIANT_CLASSES[variant],
         ]}></span>
     <span class:list={[classesSharedBetweenWipAndPulse, "ring-3 ring-surface"]}
     ></span>
     {
         variant == "wip" && (
-            <span class:list={[classesSharedBetweenWipAndPulse, "animate-ping-weak"]} />
+            <span
+                class:list={[
+                    classesSharedBetweenWipAndPulse,
+                    "animate-ping-weak",
+                ]}
+            />
         )
     }
-    <p class:list={["pl-2", variant == "upcoming" ? "text-text/40" : ""]}>
+    <p class:list={[
+        "pl-2",
+        "lg:pl-0 lg:text-center",
+        variant == "upcoming" ? "text-text/40" : ""]}>
         {label}
     </p>
 </li>
