@@ -1,7 +1,7 @@
 ---
-import { footerData } from "../data/footer_data";
+import { footerData, socials } from "../data/footer_data";
 import ArkanLabsText from "./ArkanLabsText.astro";
-
+import Github from "./icons/Github.svg";
 const { class: classNames } = Astro.props;
 ---
 
@@ -14,9 +14,8 @@ const { class: classNames } = Astro.props;
             {
                 footerData.map((column) => (
                     <div class="flex-1">
-                        <h2 class="font-mono pb-3">
-                            {column.title.toUpperCase()}
-                        </h2>
+                        {/* uppercase class is important for screen readers  */}
+                        <h2 class="font-mono pb-3 uppercase">{column.title}</h2>
                         <ul>
                             {column.items.map((link) => (
                                 <li class="pb-1.5">
@@ -33,5 +32,20 @@ const { class: classNames } = Astro.props;
                 ))
             }
         </nav>
+    </div>
+    <div class:list={[classNames, "py-6"]}>
+        <hr class="border-border w-full" />
+    </div>
+    <div>
+        <div>
+            <p class="text-muted px-4 text-center">© 2026 Arkan Labs</p>
+            <a
+                href={socials.github.href}
+                aria-label={socials.github.name}
+                class="p-1.5 rounded-full px-4 w-fit flex mx-auto"
+            >
+                <Github class="size-6" />
+            </a>
+        </div>
     </div>
 </footer>

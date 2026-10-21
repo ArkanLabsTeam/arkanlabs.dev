@@ -28,3 +28,11 @@ export const footerData = [
             })),
     },
 ] as const;
+
+
+export const socials = {
+    github : {
+        name: "Github",
+        href: "https://github.com/ArkanLabsTeam"
+    }
+ } as const;
