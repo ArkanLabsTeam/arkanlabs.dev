@@ -22,7 +22,7 @@ function getVariant(index: number): MilestoneVariant {
 }
 ---
 
-<Section title={section.title} eyebrowTitle={section.eyebrowTitle} class={className}>
+<Section title={section.title} eyebrowTitle={section.eyebrowTitle} class={className} id={section.id}>
     <div class="border-border border-b-2 pb-4">
         {
         section.segments.map((seg: string, index: number) => {

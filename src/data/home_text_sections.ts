@@ -2,6 +2,8 @@ import type { HomeTextSection } from "./types";
 
 export const homeTextSections: HomeTextSection[] = [
     {
+        displayName: "About Us",
+        id: "aboutus",
         title: "Our Love for the Craft",
         eyebrowTitle: "01 / ABOUT",
         segments: [

@@ -2,12 +2,14 @@
 import { Font } from "astro:assets";
 import Navbar from "../components/Navbar.astro";
 import "../styles/global.css";
+import Footer from "../components/Footer.astro";
 
 const { title } = Astro.props;
+const sharedClasses = "mx-auto max-w-4xl px-4 md:px-6";
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" class="motion-safe:scroll-smooth">
     <head>
         <meta charset="UTF-8" />
         <Font cssVariable="--font-libron-regular" />
@@ -18,9 +20,10 @@ const { title } = Astro.props;
         <title>{title}</title>
     </head>
     <body>
-        <Navbar />
-        <main class="mx-auto max-w-4xl px-4 md:px-6" id="main-space">
+        <Navbar class={sharedClasses} />
+        <main class={sharedClasses} id="main-space">
             <slot />
         </main>
+        <Footer class={sharedClasses} />
     </body>
 </html>

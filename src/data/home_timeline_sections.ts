@@ -2,6 +2,8 @@ import type { HomeTimelineSection } from "./types";
 
 export let homeTimelineSections: HomeTimelineSection[] = [
     {
+        id: "rihla",
+        displayName: "Rihla",
         title: "Comfortable and Affordable Rides",
         eyebrowTitle: "02 / RIHLA",
         segments: [

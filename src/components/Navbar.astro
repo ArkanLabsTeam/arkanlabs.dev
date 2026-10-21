@@ -1,27 +1,22 @@
 ---
-import { SITE } from "../lib/utils/consts";
+import { navbarLinks, SITE } from "../lib/utils/consts";
+import ArkanLabsText from "./ArkanLabsText.astro";
 
-const links = [
-    { href: "/values", label: "Values" },
-];
 const path = Astro.url.pathname;
+const { class: classNames } = Astro.props;
 ---
 
 <header
     class="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur mb-4"
 >
     <nav
-        class="mx-auto flex max-w-4xl items-center justify-between px-4 py-4 md:px-6"
+        class:list={[classNames, "items-center justify-between flex py-4"]}
+        aria-label="header"
     >
-        <a
-            href="/"
-            class="font-unbounded text-lg font-semibold uppercase md:text-2xl"
-        >
-            {SITE.title}
-        </a>
+        <ArkanLabsText />
         <ul class="flex items-center gap-5 text-sm md:gap-8">
             {
-                links.map((l) => (
+                navbarLinks.map((l) => (
                     <li>
                         <a
                             href={l.href}
