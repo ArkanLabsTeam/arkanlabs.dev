@@ -1,4 +1,4 @@
-import { labLinks, legalLinks, links, navbarLinks } from "../lib/utils/consts";
+import { labLinks, legalLinks, links, navbarLinks, SITE } from "../lib/utils/consts";
 import { homeTimelineSections } from "./home_timeline_sections";
 
 export const footerData = [
@@ -30,9 +30,21 @@ export const footerData = [
 ] as const;
 
 
+export const emailData = {
+
+    items: [
+        {
+            name: SITE.supportEmail,
+            link: `mailto:${SITE.supportEmail}`
+        }
+    ]
+
+}
+
+
 export const socials = {
-    github : {
+    github: {
         name: "Github",
         href: "https://github.com/ArkanLabsTeam"
     }
- } as const;
+} as const;

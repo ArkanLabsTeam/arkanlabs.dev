@@ -1,27 +1,32 @@
 ---
-import { footerData, socials } from "../data/footer_data";
+import { emailData, footerData, socials } from "../data/footer_data";
 import ArkanLabsText from "./ArkanLabsText.astro";
 import Github from "./icons/Github.svg";
 const { class: classNames } = Astro.props;
+const sharedColumnClasses = "md:flex-1 md:pb-0 pb-4";
+const sharedHeadingClasses = "font-mono pb-3 uppercase tracking-wider";
+const sharedListItemClasses = "pb-1.5";
+const sharedListItemLinkClasses =
+    "text-muted transition-colors text-sm hover:text-text";
 ---
 
 <footer class="bg-surface border-border border-t py-16">
-    <div class:list={["justify-between flex", classNames]}>
-        <div class="flex-1">
+    <div class:list={["justify-between flex sm:flex-row flex-col", classNames]}>
+        <div class="sm:flex-1 sm:pb-0 pb-4">
             <ArkanLabsText />
         </div>
-        <nav aria-label="Footer" class="flex-1 flex justify-between">
+        <nav aria-label="Footer" class="sm:flex-2 md:flex grid grid-cols-2">
             {
                 footerData.map((column) => (
-                    <div class="flex-1">
+                    <div class={sharedColumnClasses}>
                         {/* uppercase class is important for screen readers  */}
-                        <h2 class="font-mono pb-3 uppercase">{column.title}</h2>
+                        <h2 class={sharedHeadingClasses}>{column.title}</h2>
                         <ul>
                             {column.items.map((link) => (
-                                <li class="pb-1.5">
+                                <li class={sharedListItemClasses}>
                                     <a
                                         href={link.link}
-                                        class="text-muted transition-colors hover:text-text"
+                                        class={sharedListItemLinkClasses}
                                     >
                                         {link.name}
                                     </a>
@@ -31,6 +36,25 @@ const { class: classNames } = Astro.props;
                     </div>
                 ))
             }
+            <div class={sharedColumnClasses}>
+                <h2 class={sharedHeadingClasses}>Contact</h2>
+                <address class="not-italic">
+                    <ul>
+                        {
+                            emailData.items.map((contact) => (
+                                <li class={sharedListItemClasses}>
+                                    <a
+                                        href={contact.link}
+                                        class={sharedListItemLinkClasses}
+                                    >
+                                        {contact.name}
+                                    </a>
+                                </li>
+                            ))
+                        }
+                    </ul>
+                </address>
+            </div>
         </nav>
     </div>
     <div class:list={[classNames, "py-6"]}>
