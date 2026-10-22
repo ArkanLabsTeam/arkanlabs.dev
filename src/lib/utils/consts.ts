@@ -15,7 +15,7 @@ type LinkEntry = {
 
 export const links: LinkEntry[] = [
     { href: "/values", label: "Values", mode: "Navbar" },
-    { href: "/rihla-legal", label: "Rihla Legal", mode: "Legal" },
+    { href: "/rihla/legal", label: "Rihla Legal", mode: "Legal" },
     {href: "/#aboutus", label:"About Us", mode: "Section"}
 ] as const;
 
