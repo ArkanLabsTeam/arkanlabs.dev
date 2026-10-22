@@ -31,6 +31,7 @@
     --font-mono: var(--font-mono);
     /* ping 1s cubic-bezier(0, 0, 0.2, 1) infinite */
     --animate-ping-weak: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+    --breakpoint-3xl: 1900px;
 
     @keyframes ping {
 
