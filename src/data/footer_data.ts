@@ -35,7 +35,7 @@ export const emailData = {
     items: [
         {
             name: SITE.supportEmail,
-            link: `mailto:${SITE.supportEmail}`
+            link: `mailto:${SITE.supportEmail}?subject=${encodeURIComponent("How Can I Be As Cool As You?")}`
         }
     ]
 
