@@ -8,5 +8,11 @@ export function getMaxScrollHeight() {
         document.documentElement.clientHeight
     );
     // to account for the actual window height
-    return totalHeight - window.innerHeight 
+    return totalHeight - window.innerHeight
+}
+
+
+export function isDocumentScrollable() {
+
+    return document.documentElement.scrollHeight > window.innerHeight;
 }

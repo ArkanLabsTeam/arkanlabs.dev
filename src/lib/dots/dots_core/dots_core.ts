@@ -270,3 +270,8 @@ function getBaseColor() {
     const root = document.documentElement;
     return window.getComputedStyle(root).getPropertyValue("--color-border").trim();
 }
+
+export function getAccentColor() {
+    const root = document.documentElement;
+    return window.getComputedStyle(root).getPropertyValue("--color-accent").trim();
+}
