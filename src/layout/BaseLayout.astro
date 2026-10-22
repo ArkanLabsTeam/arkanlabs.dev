@@ -19,9 +19,12 @@ const sharedClasses = "mx-auto max-w-4xl px-4 md:px-6";
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{title}</title>
     </head>
-    <body>
+    <body class="flex-col flex min-h-dvh">
         <Navbar class={sharedClasses} />
-        <main class={sharedClasses} id="main-space">
+        <main class:list={[
+            sharedClasses,
+            "grow"
+        ]} id="main-space">
             <slot />
         </main>
         <Footer class={sharedClasses} />
