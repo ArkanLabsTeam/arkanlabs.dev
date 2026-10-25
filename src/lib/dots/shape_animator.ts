@@ -204,9 +204,10 @@ function getSideAreaWidth(coreState: PublicCoreState) {
  */
 function transformAbsoluteCoordinateToDot(coreState: PublicCoreState, coordinate: number) {
     const cellSize = coreState.grid.cellSize;
-    const numberOfCells = Math.ceil(coordinate / cellSize);
+    // since dots land in the middle of cells we remove half a cell
+    const dotIndex = Math.round((coordinate - cellSize / 2) / cellSize);
 
-    const centeredOnDot = numberOfCells * cellSize + cellSize / 2;
+    const centeredOnDot = dotIndex * cellSize + cellSize / 2;
     return centeredOnDot;
 }
 
