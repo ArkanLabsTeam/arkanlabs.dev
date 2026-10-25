@@ -127,7 +127,7 @@ function getShapeDrawAreaStart(shape: Shape, coreState: PublicCoreState): Positi
 }
 
 function getDrawingAreaStartOnSide(shape: Shape, mainAreaWidth: number, sideAreaWidth: number, coreState: PublicCoreState): Position {
-    const drawingAreaStartVertical = getVerticalShapeCenter(coreState, shape);
+    const drawingAreaStartVertical = getVerticalDrawingStartInCenter(coreState, shape);
 
     // since the mainAreaWidth is centered, we need to add one side area width to get the width 
     // from the left till the end of the main area
@@ -140,16 +140,10 @@ function getDrawingAreaStartOnSide(shape: Shape, mainAreaWidth: number, sideArea
 }
 
 
-
 function getDrawingAreaStartInCenter(shape: Shape, coreState: PublicCoreState) {
-    const cellSize = coreState.grid.cellSize;
+    const drawingStartVertical = getVerticalDrawingStartInCenter(coreState, shape);
+    const drawingStartHorizontal = getHorizontalDrawingStartInCenter(coreState, shape);
 
-    const drawingStartVertical = getVerticalShapeCenter(coreState, shape);
-
-    const canvasWidth = coreState.canvas.getBoundingClientRect().width;
-    const shapeWidth = getShapeWidth(shape, cellSize);
-
-    const drawingStartHorizontal = canvasWidth / 2 - shapeWidth / 2;
 
     return { x: drawingStartHorizontal, y: drawingStartVertical }
 }
@@ -172,8 +166,18 @@ function canDrawInSideArea(shape: Shape, coreState: PublicCoreState, sideAreaWid
 
 }
 
+function getHorizontalDrawingStartInCenter(coreState: PublicCoreState, shape: Shape) {
+    const cellSize = coreState.grid.cellSize;
+    const canvasWidth = coreState.canvas.getBoundingClientRect().width;
+    const shapeWidth = getShapeWidth(shape, cellSize);
+    const absoluteStartHorizontal = canvasWidth / 2 - shapeWidth / 2;
+    const drawingStartHorizontal = transformAbsoluteCoordinateToDot(coreState, absoluteStartHorizontal);
 
-function getVerticalShapeCenter(coreState: PublicCoreState, shape: Shape): number {
+    return drawingStartHorizontal;
+
+}
+
+function getVerticalDrawingStartInCenter(coreState: PublicCoreState, shape: Shape): number {
     const cellSize = coreState.grid.cellSize;
     const canvasHeight = coreState.canvas.getBoundingClientRect().height;
     const shapeHeight = getShapeHeight(shape, cellSize);
@@ -189,8 +193,7 @@ function getSideAreaWidth(coreState: PublicCoreState) {
     const canvasWidth = coreState.canvas.getBoundingClientRect().width;
     // since the main area is centered, this returns the sum of 2 areas
     // divide them by 2 to get the area of 1 side
-    const absoluteCenter = (canvasWidth - pageWidth) / 2;
-    return transformAbsoluteCoordinateToDot(coreState, absoluteCenter);
+    return (canvasWidth - pageWidth) / 2;
 }
 
 /**
