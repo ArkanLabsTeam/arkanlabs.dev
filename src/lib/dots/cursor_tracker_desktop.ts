@@ -8,7 +8,6 @@ type MainPageDesktopState = {
     accentColor: string,
     isMouseInScreen: boolean,
     requestFrame: RequestFrameFunction
-    prefersReducedMotion: boolean
 }
 
 const GLOW_ANIMATION_CONFIG = {
@@ -22,7 +21,6 @@ function setupMainLoop(): void {
     let abortController: AbortController;
     let mainState: MainPageDesktopState;
     let drawDot: DrawDotFunction;
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const setup: EffectSetupFunction = (requestFrame, drawDotFunction, drawLine, coreState: PublicCoreState) => {
         mainState = {
             mouse: { x: 0, y: 0 },
@@ -31,7 +29,6 @@ function setupMainLoop(): void {
             accentColor: getAccentColor(),
             isMouseInScreen: false,
             requestFrame,
-            prefersReducedMotion
         }
         abortController = setupListeners(mainState);
         drawDot = drawDotFunction;
@@ -42,7 +39,7 @@ function setupMainLoop(): void {
     }
 
     const update = (coreState: PublicCoreState, stepScale: number): boolean => {
-        if (mainState.prefersReducedMotion) return false;
+        if (coreState.prefersReducedMotion) return false;
         interpolateGlowPosition(mainState, stepScale);
         updateStrengthBasedOnMousePosition(mainState, stepScale);
         const shouldRequestFrameForMousePresence = shouldRequestFrameForMouseWindowPresence(mainState);
@@ -59,7 +56,7 @@ function setupMainLoop(): void {
     }
 
     const draw = (coreState: PublicCoreState) => {
-        if (mainState.prefersReducedMotion) return;
+        if (coreState.prefersReducedMotion) return;
         drawCloseDots(mainState, coreState, drawDot);
     }
 
@@ -172,18 +169,11 @@ function getAccentColor() {
 function setupListeners(state: MainPageDesktopState): AbortController {
     const controller = new AbortController();
     const { signal } = controller;
-    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     window.addEventListener("mousemove", (e) => updateMousePositionState(e, state), { signal })
     document.addEventListener("mouseenter", (e) => updateMousePositionState(e, state), { signal });
     document.addEventListener("mouseleave", () => updateMousePositionStateOnLeave(state), { signal });
-    motionQuery.addEventListener('change', (e) => updatePreferReducedMotion(e, state), { signal });
     return controller;
-}
-
-function updatePreferReducedMotion(e: MediaQueryListEvent, dotGridState: MainPageDesktopState) {
-    dotGridState.prefersReducedMotion = e.matches
-    dotGridState.requestFrame();
 }
 
 function updateMousePositionStateOnLeave(dotGridState: MainPageDesktopState) {

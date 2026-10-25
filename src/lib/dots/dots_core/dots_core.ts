@@ -11,6 +11,7 @@ type CoreState = {
     baseColor: string
     previousLoopRun: number | null
     requestFrame: RequestFrameFunction,
+    prefersReducedMotion: boolean
 }
 
 type Grid = {
@@ -19,6 +20,7 @@ type Grid = {
     scale: number
     cellSize: number
     dots: Dot[][]
+    baseDotRadius: number
 }
 
 type GridSize = {
@@ -32,6 +34,7 @@ export type PublicCoreState = {
     canvas: HTMLCanvasElement,
     context: CanvasRenderingContext2D,
     grid: Grid
+    prefersReducedMotion: boolean
 }
 
 export type Dot = Position;
@@ -59,7 +62,7 @@ export type EffectSetupFunction = (
 
 
 export type RequestFrameFunction = () => void;
-export type DrawDotFunction = (dot: Dot, scale: number) => void;
+export type DrawDotFunction = (dot: Dot, scale?: number) => void;
 export type DrawLineFunction = (...dots: Dot[]) => void;
 
 const DOT_GRID_CONFIG = {
@@ -77,14 +80,15 @@ export function setupCoreLoop(effect: Effect) {
     const canvasSetup = setupCanvas(DOT_GRID_CONFIG.canvasId);
     if (canvasSetup == null) return;
     const { canvas, ctx } = canvasSetup;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const grid = gridAndDotSetup(canvas)
 
     const requestFrame = () => {
         if (coreState.pendingFrame != null) return;
         coreState.pendingFrame = requestAnimationFrame((now) => coreLoop(coreState, now));
     };
-    
-    const simplifiedDrawDotFunction: DrawDotFunction = (dot, scale = 1) => {
+
+    const simplifiedDrawDotFunction: DrawDotFunction = (dot: Dot, scale: number = 1) => {
         drawDot(ctx, dot, scale * coreState.grid.scale)
     };
 
@@ -102,7 +106,8 @@ export function setupCoreLoop(effect: Effect) {
         abortController: null,
         baseColor: getBaseColor(),
         previousLoopRun: null,
-        requestFrame: requestFrame
+        requestFrame: requestFrame,
+        prefersReducedMotion: prefersReducedMotion
     }
     setupCanvasResolution(canvas, ctx);
     coreState.abortController = createListeners(coreState);
@@ -124,12 +129,12 @@ function coreLoop(coreState: CoreState, now: number) {
     const timeSinceLastLoop = now - (coreState.previousLoopRun ?? now);
     coreState.previousLoopRun = now;
     const stepScale = getStepScale(timeSinceLastLoop);
-    const needsUpdate = coreState.currentEffect?.update(coreState, stepScale);
+    const needsUpdate = coreState.currentEffect.update(coreState, stepScale);
 
     //draw
     ctx.clearRect(0, 0, canvas.width, canvas.height); //resetting canvas
     drawBaseDots(coreState);
-    coreState.currentEffect?.draw(coreState);
+    coreState.currentEffect.draw(coreState);
     if (needsUpdate) {
         coreState.requestFrame();
     }
@@ -152,6 +157,7 @@ function gridAndDotSetup(canvas: HTMLCanvasElement): Grid {
         scale: gridScale,
         cellSize,
         dots,
+        baseDotRadius: DOT_GRID_CONFIG.dotRadius,
         ...gridSize
     }
 }
@@ -244,9 +250,17 @@ function setupGridSize(canvas: HTMLCanvasElement, cellSize: number): GridSize {
 function createListeners(state: CoreState): AbortController {
     const controller = new AbortController();
     const { signal } = controller;
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
     const debounceFunction = debounceDotRebuild(200);
     window.addEventListener("resize", () => debounceFunction(state), { signal });
+    motionQuery.addEventListener('change', (e) => updatePreferReducedMotion(e, state), { signal });
     return controller;
+}
+
+function updatePreferReducedMotion(e: MediaQueryListEvent, state: CoreState) {
+    state.prefersReducedMotion = e.matches
+    state.requestFrame();
 }
 
 

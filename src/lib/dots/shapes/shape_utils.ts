@@ -1,4 +1,3 @@
-import { number } from "astro:schema"
 import type { Dot } from "../dots_core/dots_core"
 
 export enum Brightness {
@@ -21,7 +20,7 @@ export type Segment = {
 }
 
 export function getShapeWidth(shape: Shape, cellSize: number) {
-    return shape.sizeRequiredInDots.width * cellSize
+    return shape.sizeRequiredInDots.width * cellSize;
 }
 
 export function getShapeHeight(shape: Shape, cellSize: number) {
@@ -44,4 +43,8 @@ export function getScaleFromBrightness(brightness: Brightness) {
         case Brightness.dim:
             return 1.65
     }
+}
+
+export function getLineThickness(dotSize: number) {
+    return dotSize * 0.45;
 }

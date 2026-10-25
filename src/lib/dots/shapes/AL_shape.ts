@@ -224,7 +224,7 @@ export const alShape: Shape = {
         },
         {
             dot1: {
-                x: 0,
+                x: 3,
                 y: 16,
             },
 

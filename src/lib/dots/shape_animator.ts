@@ -1,6 +1,6 @@
-import { getAccentColor, setupCoreLoop, type DrawDotFunction, type DrawLineFunction, type EffectSetupFunction, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
+import { getAccentColor, setupCoreLoop, type Dot, type DrawDotFunction, type DrawLineFunction, type EffectSetupFunction, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
 import { closeTo, debounce, interpolation, smoothStep, type Position } from "../utils/general"
-import { getOpacityFromBrightness, getScaleFromBrightness, getShapeHeight, getShapeWidth, type Segment, type Shape } from "./shapes/shape_utils";
+import { getLineThickness, getOpacityFromBrightness, getScaleFromBrightness, getShapeHeight, getShapeWidth, type Segment, type Shape } from "./shapes/shape_utils";
 import { alShape } from "./shapes/AL_shape";
 import { getMaxScrollHeight, isDocumentScrollable } from "../utils/document";
 
@@ -8,7 +8,6 @@ type ShapeDrawerState = {
     canScroll: boolean,
     accentColor: string,
     requestFrame: RequestFrameFunction
-    prefersReducedMotion: boolean
     drawingAreaStart: Position
     shape: Shape
     scrollPosition: number
@@ -25,21 +24,21 @@ const SHAPE_DRAWING_CONFIG = {
     snapStrengthThreshold: 0.1,
     glowRadius: 150,
     mainAreaId: "main-space",
-    horizontalPadding: 10 // 5 per side
+    horizontalPadding: 10
 } as const;
 
 /**
- * Will crash if you can't scroll
+ * Will refuse to animate if the page can't scroll
  */
 function setupMainLoop(shape: Shape): void {
     let abortController: AbortController;
     let mainState: ShapeDrawerState;
     let drawDotFunction: DrawDotFunction;
     let drawLineFunction: DrawLineFunction;
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const setup: EffectSetupFunction = (requestFrame, drawDot, drawLine, coreState) => {
         const drawingAreaStart = getShapeDrawAreaStart(shape, coreState);
         const maxScrollPosition = getMaxScrollHeight();
+        const currentScrollPosition = window.scrollY;
         if (!drawingAreaStart) throw Error("Can't load drawing area");
 
         drawDotFunction = drawDot;
@@ -48,10 +47,9 @@ function setupMainLoop(shape: Shape): void {
             canScroll: isDocumentScrollable(),
             accentColor: getAccentColor(),
             requestFrame,
-            prefersReducedMotion,
             drawingAreaStart,
             shape,
-            scrollPosition: 0,
+            scrollPosition: currentScrollPosition,
             maxScrollPosition,
             segmentsToDraw: []
         }
@@ -65,7 +63,13 @@ function setupMainLoop(shape: Shape): void {
 
     // "_" is the time scale.
     const update = (coreState: PublicCoreState, _: number): boolean => {
-        if (!mainState.canScroll) return false;
+        if (!mainState.canScroll) {
+            // shape appears fully drawed
+            mainState.segmentsToDraw = mainState.shape.segments;
+            return false;
+        }
+
+        mainState.maxScrollPosition = getMaxScrollHeight(); // incase something updates for some reason
         mainState.segmentsToDraw = getSegmentsToDraw(mainState);
         // We "can" interpolate the animation steps, 
         // but it's not worth it.
@@ -76,29 +80,16 @@ function setupMainLoop(shape: Shape): void {
 
     const draw = (coreState: PublicCoreState) => {
         for (let segment of mainState.segmentsToDraw) {
-            const joinedState = { ...coreState, ...mainState }
-            
-            const dot1InGlobalCoords = translateGridPositionToGlobalPosition(joinedState, segment.dot1);
-            const dot2InGlobalCoords = translateGridPositionToGlobalPosition(joinedState, segment.dot2);
-            const scale = getScaleFromBrightness(segment.brightness);
-            coreState.context.globalAlpha = getOpacityFromBrightness(segment.brightness);
-            coreState.context.fillStyle = joinedState.accentColor;
-            console.log(dot2InGlobalCoords);
-            
-            drawDotFunction(dot2InGlobalCoords, scale);
-            drawDotFunction(dot1InGlobalCoords, scale);
-            drawLineFunction(dot1InGlobalCoords, dot1InGlobalCoords);
-
+            drawSegment(coreState, mainState, segment, drawDotFunction, drawLineFunction);
         }
     }
 
     const onResize = (coreState: PublicCoreState) => {
-        const leftOverSpace = getLeftOverSpaceWidth(coreState);
+        const leftOverSpace = getSideAreaWidth(coreState);
         const drawingAreaStart = getShapeDrawAreaStart(shape, coreState);
         const canScroll = isDocumentScrollable();
-        if (!leftOverSpace || !drawingAreaStart) return;
+        if (leftOverSpace == null || drawingAreaStart == null) return;
 
-        // if left over is null this is too, we can do ! safely
         mainState.drawingAreaStart = drawingAreaStart;
         mainState.maxScrollPosition = getMaxScrollHeight();
         mainState.canScroll = canScroll;
@@ -124,21 +115,23 @@ setupMainLoop(alShape); // you would wanna build a chooser file
  */
 function getShapeDrawAreaStart(shape: Shape, coreState: PublicCoreState): Position | null {
     const mainAreaWidth = getMainAreaWidth();
+    const sideAreaWidth = getSideAreaWidth(coreState);
+    const canDrawInSide = canDrawInSideArea(shape, coreState, sideAreaWidth);
 
-    const canDrawInSide = canDrawInSideArea(mainAreaWidth, shape, coreState);
-
-    if (mainAreaWidth == null || canDrawInSide == null) return null;
+    if (mainAreaWidth == null || canDrawInSide == null || sideAreaWidth === null) return null;
 
     const drawingAreaStartInCenter = getDrawingAreaStartInCenter(shape, coreState);
-    const drawingAreaStartOnSide = getDrawingAreaStartOnSide(shape, mainAreaWidth, coreState);
+    const drawingAreaStartOnSide = getDrawingAreaStartOnSide(shape, mainAreaWidth, sideAreaWidth, coreState);
 
     return canDrawInSide ? drawingAreaStartOnSide : drawingAreaStartInCenter;
 }
 
-function getDrawingAreaStartOnSide(shape: Shape, mainAreaWidth: number, coreState: PublicCoreState): Position {
+function getDrawingAreaStartOnSide(shape: Shape, mainAreaWidth: number, sideAreaWidth: number, coreState: PublicCoreState): Position {
     const drawingAreaStartVertical = getVerticalShapeCenter(coreState, shape);
 
-    const drawingAreaStartHorizontal = mainAreaWidth + SHAPE_DRAWING_CONFIG.horizontalPadding;
+    // since the mainAreaWidth is centered, we need to add one side area width to get the width 
+    // from the left till the end of the main area
+    const drawingAreaStartHorizontal = mainAreaWidth + sideAreaWidth + SHAPE_DRAWING_CONFIG.horizontalPadding;
     return {
         x: drawingAreaStartHorizontal,
         y: drawingAreaStartVertical
@@ -168,15 +161,14 @@ function getMainAreaWidth() {
 }
 
 
-function canDrawInSideArea(mainAreaWidth: number | null, shape: Shape, coreState: PublicCoreState): boolean | null {
+function canDrawInSideArea(shape: Shape, coreState: PublicCoreState, sideAreaWidth: number | null): boolean | null {
     const shapeWidth = getShapeWidth(shape, coreState.grid.cellSize);
 
-    const paddedWidth = shapeWidth + SHAPE_DRAWING_CONFIG.horizontalPadding;
-    const drawingAreaWidth = getLeftOverSpaceWidth(coreState);
+    const paddedWidth = shapeWidth + SHAPE_DRAWING_CONFIG.horizontalPadding * 2;
 
-    if (drawingAreaWidth === null || mainAreaWidth === null) return null;
+    if (sideAreaWidth === null) return null;
 
-    return paddedWidth <= drawingAreaWidth;
+    return paddedWidth <= sideAreaWidth;
 
 }
 
@@ -185,20 +177,67 @@ function getVerticalShapeCenter(coreState: PublicCoreState, shape: Shape): numbe
     const cellSize = coreState.grid.cellSize;
     const canvasHeight = coreState.canvas.getBoundingClientRect().height;
     const shapeHeight = getShapeHeight(shape, cellSize);
-    return canvasHeight / 2 - shapeHeight / 2;
+    const absoluteCenter = canvasHeight / 2 - shapeHeight / 2;
+    return transformAbsoluteCoordinateToDot(coreState, absoluteCenter);
 }
 
 
 
-function getLeftOverSpaceWidth(coreState: PublicCoreState) {
+function getSideAreaWidth(coreState: PublicCoreState) {
     const pageWidth = getMainAreaWidth();
     if (!pageWidth) return null;
     const canvasWidth = coreState.canvas.getBoundingClientRect().width;
-    return canvasWidth - pageWidth;
+    // since the main area is centered, this returns the sum of 2 areas
+    // divide them by 2 to get the area of 1 side
+    const absoluteCenter = (canvasWidth - pageWidth) / 2;
+    return transformAbsoluteCoordinateToDot(coreState, absoluteCenter);
+}
+
+/**
+ * 
+ * @param coreState The public state provided by dots core
+ * @param coordinate The x/y coordinate to translate to dot coordinates
+ * @returns the new transformed coordinate
+ */
+function transformAbsoluteCoordinateToDot(coreState: PublicCoreState, coordinate: number) {
+    const cellSize = coreState.grid.cellSize;
+    const numberOfCells = Math.ceil(coordinate / cellSize);
+
+    const centeredOnDot = numberOfCells * cellSize + cellSize / 2;
+    return centeredOnDot;
 }
 
 
 // dots
+function drawSegment(coreState: PublicCoreState, mainState: ShapeDrawerState, segment: Segment, drawDotFunction: DrawDotFunction, drawLineFunction: DrawLineFunction) {
+    const joinedState = { ...coreState, ...mainState };
+    const context = coreState.context;
+    context.beginPath();
+
+
+    const scale = getScaleFromBrightness(segment.brightness);
+    context.globalAlpha = getOpacityFromBrightness(segment.brightness);
+    context.fillStyle = joinedState.accentColor;
+    context.strokeStyle = joinedState.accentColor;
+    context.lineWidth = getLineThickness(joinedState.grid.baseDotRadius);
+    const { dot1, dot2 } = getGlobalDotPositions(joinedState, segment.dot1, segment.dot2);
+
+
+    drawDotFunction(dot1, scale);
+    drawDotFunction(dot2, scale);
+    context.fill();
+
+    context.beginPath();
+    drawLineFunction(dot1, dot2);
+    context.stroke();
+}
+
+function getGlobalDotPositions(state: JoinedState, dot1: Dot, dot2: Dot): { dot1: Dot, dot2: Dot } {
+    const dot1InGlobalCoords = translateGridPositionToGlobalPosition(state, dot1);
+    const dot2InGlobalCoords = translateGridPositionToGlobalPosition(state, dot2);
+    return { dot1: dot1InGlobalCoords, dot2: dot2InGlobalCoords }
+}
+
 function getSegmentsToDraw(state: ShapeDrawerState): Segment[] {
     const progress = getAnimationProgress(state);
 
@@ -222,7 +261,7 @@ function translateGridPositionToGlobalPosition(state: JoinedState, gridCoordinat
 function getAnimationProgress(state: ShapeDrawerState): number {
     const currentScrollPosition = state.scrollPosition;
     const maxScrollPosition = state.maxScrollPosition;
-    const animationProgressPadding = maxScrollPosition / 4;
+    const animationProgressPadding = maxScrollPosition / 4; // start and end 1/4 progress before
     const paddedProgress = currentScrollPosition + animationProgressPadding;
     const progress = smoothStep(paddedProgress, 0, maxScrollPosition)
     return progress;
@@ -239,20 +278,15 @@ function animationProgressToSegment(progress: number, state: ShapeDrawerState): 
 function setupListeners(state: ShapeDrawerState): AbortController {
     const controller = new AbortController();
     const { signal } = controller;
-    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     // window.addEventListener("mousemove", (e) => updateMousePositionState(e, state), { signal })
     // document.addEventListener("mouseenter", (e) => updateMousePositionState(e, state), { signal });
     // document.addEventListener("mouseleave", () => updateMousePositionStateOnLeave(state), { signal });
-    motionQuery.addEventListener('change', (e) => updatePreferReducedMotion(e, state), { signal });
     document.addEventListener('scroll', () => updateScrollPosition(state), { signal });
     return controller;
 }
 
-function updatePreferReducedMotion(e: MediaQueryListEvent, dotGridState: ShapeDrawerState) {
-    dotGridState.prefersReducedMotion = e.matches
-    dotGridState.requestFrame();
-}
+
 
 function updateScrollPosition(state: ShapeDrawerState) {
     state.scrollPosition = window.scrollY;
