@@ -1,6 +1,6 @@
 import { getAccentColor, setupCoreLoop, type Dot, type DrawDotFunction, type DrawLineFunction, type EffectSetupFunction, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
 import { closeTo, debounce, interpolation, smoothStep, type Position } from "../utils/general"
-import { getLineThickness, getOpacityFromBrightness, getScaleFromBrightness, getShapeHeight, getShapeWidth, type Segment, type Shape } from "./shapes/shape_utils";
+import { Brightness, getLineThickness, getOpacityFromBrightness, getScaleFromBrightness, getShapeHeight, getShapeWidth, type Segment, type Shape } from "./shapes/shape_utils";
 import { alShape } from "./shapes/AL_shape";
 import { getMaxScrollHeight, isDocumentScrollable } from "../utils/document";
 
@@ -12,13 +12,19 @@ type ShapeDrawerState = {
     shape: Shape
     scrollPosition: number
     maxScrollPosition: number
-    segmentsToDraw: Segment[]
+    segmentsToDraw: SegmentWithShouldDrawFlag[]
 }
 
 // only use as arguments or per-update, don't store.
 // because updating any original objects won't propagate
 type JoinedState = PublicCoreState & ShapeDrawerState
-
+type DotWithBrightness = Dot & { brightness: Brightness }
+type DotWithDrawingFlag = Dot & { shouldDraw: boolean, brightness?: Brightness };
+type SegmentWithShouldDrawFlag = {
+    dot1: DotWithDrawingFlag,
+    dot2: DotWithDrawingFlag,
+    brightness: Brightness
+}
 const SHAPE_DRAWING_CONFIG = {
     easing: 0.1,
     snapStrengthThreshold: 0.1,
@@ -65,12 +71,13 @@ function setupMainLoop(shape: Shape): void {
     const update = (coreState: PublicCoreState, _: number): boolean => {
         if (!mainState.canScroll) {
             // shape appears fully drawed
-            mainState.segmentsToDraw = mainState.shape.segments;
+            mainState.segmentsToDraw = getSegmentsToDrawWithoutCollisions(mainState.shape.segments);
             return false;
         }
 
         mainState.maxScrollPosition = getMaxScrollHeight(); // incase something updates for some reason
-        mainState.segmentsToDraw = getSegmentsToDraw(mainState);
+        const segments = getSegmentsToDraw(mainState);
+        mainState.segmentsToDraw = getSegmentsToDrawWithoutCollisions(segments)
         // We "can" interpolate the animation steps, 
         // but it's not worth it.
         // Steps are already small.
@@ -213,27 +220,99 @@ function transformAbsoluteCoordinateToDot(coreState: PublicCoreState, coordinate
 
 
 // dots
-function drawSegment(coreState: PublicCoreState, mainState: ShapeDrawerState, segment: Segment, drawDotFunction: DrawDotFunction, drawLineFunction: DrawLineFunction) {
+function drawSegment(coreState: PublicCoreState, mainState: ShapeDrawerState, segment: SegmentWithShouldDrawFlag, drawDotFunction: DrawDotFunction, drawLineFunction: DrawLineFunction) {
     const joinedState = { ...coreState, ...mainState };
     const context = coreState.context;
     context.beginPath();
 
-
-    const scale = getScaleFromBrightness(segment.brightness);
     context.globalAlpha = getOpacityFromBrightness(segment.brightness);
-    context.fillStyle = joinedState.accentColor;
     context.strokeStyle = joinedState.accentColor;
     context.lineWidth = getLineThickness(joinedState.grid.baseDotRadius);
     const { dot1, dot2 } = getGlobalDotPositions(joinedState, segment.dot1, segment.dot2);
 
-
-    drawDotFunction(dot1, scale);
-    drawDotFunction(dot2, scale);
-    context.fill();
-
     context.beginPath();
     drawLineFunction(dot1, dot2);
     context.stroke();
+
+    drawDots(segment, drawDotFunction, joinedState);
+}
+
+function drawDots(segment: SegmentWithShouldDrawFlag, drawDotFunction: DrawDotFunction, joinedState: JoinedState) {
+    const context = joinedState.context;
+    context.fillStyle = joinedState.accentColor;
+
+    const dot1 = segment.dot1;
+    const dot2 = segment.dot2;
+    const dots = [dot1, dot2];
+
+    context.beginPath();
+    for (const dot of dots) {
+        // the first one already "guarantees" the other by the code but this makes it defensive
+        if (dot.shouldDraw && dot.brightness !== undefined) {
+            context.globalAlpha = getOpacityFromBrightness(dot.brightness);
+            const scale = getScaleFromBrightness(dot.brightness);
+            drawDotFunction(dot, scale);
+        }
+    }
+    context.fill();
+}
+
+
+function getDotsToDrawWithoutCollisions(segments: Segment[]): Map<number, DotWithBrightness | undefined> {
+    const map: Map<number, DotWithBrightness> = new Map();
+    for (const segment of segments) {
+        const dot1 = segment.dot1;
+        const dot2 = segment.dot2;
+        const brightness = segment.brightness;
+
+        const key1 = getDotKeyForMap(dot1);
+        const key2 = getDotKeyForMap(dot2);
+
+        const dot1InMap = map.get(key1);
+        const dot2InMap = map.get(key2);
+
+        const newBrightness1 = Math.max((dot1InMap?.brightness) ?? Brightness.dim, brightness);
+        const newBrightness2 = Math.max((dot2InMap?.brightness) ?? Brightness.dim, brightness);
+
+        map.set(key1, { ...dot1, brightness: newBrightness1 });
+        map.set(key2, { ...dot2, brightness: newBrightness2 });
+    }
+    return map;
+}
+
+function getDotKeyForMap(dot: Dot) {
+    return dot.x * 100 + dot.y;
+}
+
+
+function getSegmentsToDrawWithoutCollisions(segments: Segment[]): SegmentWithShouldDrawFlag[] {
+    // go over the list
+    // check if the dict has it, if it does add it and remove it, set the should draw to true
+    // if it doesnt add it but set the should draw to false
+    const newSegments: SegmentWithShouldDrawFlag[] = [];
+    const dotsToDrawWithoutCollisions = getDotsToDrawWithoutCollisions(segments);
+    for (const segment of segments) {
+        const dot1 = segment.dot1;
+        const dot2 = segment.dot2;
+        const brightness = segment.brightness;
+
+        const dot1Key = getDotKeyForMap(dot1);
+        const dot2Key = getDotKeyForMap(dot2);
+
+        const dot1FromMap = dotsToDrawWithoutCollisions.get(dot1Key);
+        const dot2FromMap = dotsToDrawWithoutCollisions.get(dot2Key);
+
+        let dot1ToAdd: DotWithDrawingFlag = { ...dot1, shouldDraw: dot1FromMap != undefined, brightness: dot1FromMap?.brightness };
+        let dot2ToAdd: DotWithDrawingFlag = { ...dot1, shouldDraw: dot2FromMap != undefined, brightness: dot1FromMap?.brightness };
+
+        dotsToDrawWithoutCollisions.delete(dot1Key);
+        dotsToDrawWithoutCollisions.delete(dot2Key);
+
+        newSegments.push({ dot1: dot1ToAdd, dot2: dot2ToAdd, brightness: brightness })
+
+    }
+    return newSegments;
+
 }
 
 function getGlobalDotPositions(state: JoinedState, dot1: Dot, dot2: Dot): { dot1: Dot, dot2: Dot } {

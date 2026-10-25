@@ -1,7 +1,8 @@
 import type { Dot } from "../dots_core/dots_core"
 
 export enum Brightness {
-    dim, bright
+    dim = 0,
+    bright = 1
 }
 
 export type Shape = {
