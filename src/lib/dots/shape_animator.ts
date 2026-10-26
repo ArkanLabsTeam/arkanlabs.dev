@@ -80,8 +80,10 @@ function setupMainLoop(shape: Shape): void {
     }
 
     const draw = (coreState: PublicCoreState) => {
+        const joinedState = {...coreState, ...mainState}
         for (let segment of mainState.segmentsToDraw) {
-            drawSegment(coreState, mainState, segment, drawDotFunction, drawLineFunction);
+            drawSegment(joinedState, segment, drawDotFunction, drawLineFunction);
+            lowerBackgroundDotOpacity(joinedState, segment, drawDotFunction);
         }
     }
 
@@ -218,9 +220,8 @@ function translateAbsoluteCoordinateToDot(coreState: PublicCoreState, coordinate
 
 
 // dots
-function drawSegment(coreState: PublicCoreState, mainState: ShapeDrawerState, segment: SegmentWithShouldDrawFlag, drawDotFunction: DrawDotFunction, drawLineFunction: DrawLineFunction) {
-    const joinedState = { ...coreState, ...mainState };
-    const context = coreState.context;
+function drawSegment(joinedState: JoinedState, segment: SegmentWithShouldDrawFlag, drawDotFunction: DrawDotFunction, drawLineFunction: DrawLineFunction) {
+    const context = joinedState.context;
 
     context.globalAlpha = getOpacityFromBrightness(segment.brightness);
     context.strokeStyle = joinedState.accentColor;
@@ -256,6 +257,12 @@ function drawDots(segment: SegmentWithShouldDrawFlag, drawDotFunction: DrawDotFu
 
         }
     }
+}
+
+function lowerBackgroundDotOpacity(joinedState: JoinedState, segment: SegmentWithShouldDrawFlag, drawDot: DrawDotFunction) {
+    // create an area bigger than the actual shape size by "opacity decrease" distance from each size
+    // go though each dot in that area and calculate it's opacity from the nearest dot
+    // for each dot, only go as far as the max distance, no need to scan further than how far the effect can reach anyways
 }
 
 
