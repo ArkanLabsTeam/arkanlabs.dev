@@ -86,15 +86,16 @@ function setupMainLoop(shape: Shape): void {
     }
 
     const onResize = (coreState: PublicCoreState) => {
-        const joinedState = { ...mainState, ...coreState };
-        const leftOverSpace = getSideAreaWidth(coreState);
         const drawingAreaStart = getShapeDrawAreaStart(shape, coreState);
         const canScroll = isDocumentScrollable();
-        if (leftOverSpace == null || drawingAreaStart == null) return;
-        mainState.allSegments = getSegmentsToDrawWithoutCollisions(joinedState, shape.segments)
+        if (drawingAreaStart == null) return;
 
         mainState.drawingAreaStart = drawingAreaStart;
         mainState.maxScrollPosition = getMaxScrollHeight();
+        const joinedState = { ...mainState, ...coreState };
+
+
+        mainState.allSegments = getSegmentsToDrawWithoutCollisions(joinedState, shape.segments)
         mainState.canScroll = canScroll;
     };
 
