@@ -220,8 +220,8 @@ function drawLine(context: CanvasRenderingContext2D, ...dots: Dot[]) {
     // thickness is control from context which can be done from the effect
     for (let i = 1; i < dots.length; i++) {
         const dot = dots[i];
-        const previosDot = dots[i - 1];
-        context.moveTo(previosDot.x, previosDot.y)
+        const previousDot = dots[i - 1];
+        context.moveTo(previousDot.x, previousDot.y)
         context.lineTo(dot.x, dot.y);
     }
 }

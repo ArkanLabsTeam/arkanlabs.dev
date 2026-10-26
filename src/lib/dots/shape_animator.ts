@@ -1,5 +1,5 @@
 import { getAccentColor, setupCoreLoop, type Dot, type DrawDotFunction, type DrawLineFunction, type EffectSetupFunction, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
-import { closeTo, debounce, interpolation, smoothStep, type Position } from "../utils/general"
+import { smoothStep, type Position } from "../utils/general"
 import { Brightness, getLineThickness, getOpacityFromBrightness, getScaleFromBrightness, getShapeHeight, getShapeWidth, type Segment, type Shape } from "./shapes/shape_utils";
 import { alShape } from "./shapes/AL_shape";
 import { getMaxScrollHeight, isDocumentScrollable } from "../utils/document";
@@ -13,6 +13,7 @@ type ShapeDrawerState = {
     scrollPosition: number
     maxScrollPosition: number
     segmentsToDraw: SegmentWithShouldDrawFlag[]
+    allSegments: SegmentWithShouldDrawFlag[]
 }
 
 // only use as arguments or per-update, don't store.
@@ -26,9 +27,6 @@ type SegmentWithShouldDrawFlag = {
     brightness: Brightness
 }
 const SHAPE_DRAWING_CONFIG = {
-    easing: 0.1,
-    snapStrengthThreshold: 0.1,
-    glowRadius: 150,
     mainAreaId: "main-space",
     horizontalPadding: 10
 } as const;
@@ -46,7 +44,6 @@ function setupMainLoop(shape: Shape): void {
         const maxScrollPosition = getMaxScrollHeight();
         const currentScrollPosition = window.scrollY;
         if (!drawingAreaStart) throw Error("Can't load drawing area");
-
         drawDotFunction = drawDot;
         drawLineFunction = drawLine;
         mainState = {
@@ -57,8 +54,11 @@ function setupMainLoop(shape: Shape): void {
             shape,
             scrollPosition: currentScrollPosition,
             maxScrollPosition,
-            segmentsToDraw: []
+            segmentsToDraw: [],
+            allSegments: []
         }
+        const joinedState = { ...mainState, ...coreState };
+        mainState.allSegments = getSegmentsToDrawWithoutCollisions(joinedState, shape.segments)
         abortController = setupListeners(mainState);
 
     }
@@ -69,19 +69,13 @@ function setupMainLoop(shape: Shape): void {
 
     // "_" is the time scale.
     const update = (coreState: PublicCoreState, _: number): boolean => {
-        if (!mainState.canScroll) {
+        if (!mainState.canScroll || coreState.prefersReducedMotion) {
             // shape appears fully drawed
-            mainState.segmentsToDraw = getSegmentsToDrawWithoutCollisions(mainState.shape.segments);
+            mainState.segmentsToDraw = mainState.allSegments;
             return false;
         }
 
-        mainState.maxScrollPosition = getMaxScrollHeight(); // incase something updates for some reason
-        const segments = getSegmentsToDraw(mainState);
-        mainState.segmentsToDraw = getSegmentsToDrawWithoutCollisions(segments)
-        // We "can" interpolate the animation steps, 
-        // but it's not worth it.
-        // Steps are already small.
-        // If they looked to choppy we can interpolate
+        mainState.segmentsToDraw = getSegmentsToDraw(mainState);
         return false
     }
 
@@ -92,10 +86,12 @@ function setupMainLoop(shape: Shape): void {
     }
 
     const onResize = (coreState: PublicCoreState) => {
+        const joinedState = { ...mainState, ...coreState };
         const leftOverSpace = getSideAreaWidth(coreState);
         const drawingAreaStart = getShapeDrawAreaStart(shape, coreState);
         const canScroll = isDocumentScrollable();
         if (leftOverSpace == null || drawingAreaStart == null) return;
+        mainState.allSegments = getSegmentsToDrawWithoutCollisions(joinedState, shape.segments)
 
         mainState.drawingAreaStart = drawingAreaStart;
         mainState.maxScrollPosition = getMaxScrollHeight();
@@ -138,9 +134,10 @@ function getDrawingAreaStartOnSide(shape: Shape, mainAreaWidth: number, sideArea
 
     // since the mainAreaWidth is centered, we need to add one side area width to get the width 
     // from the left till the end of the main area
-    const drawingAreaStartHorizontal = mainAreaWidth + sideAreaWidth + SHAPE_DRAWING_CONFIG.horizontalPadding;
+    const startingPositionHorizontal = mainAreaWidth + sideAreaWidth + SHAPE_DRAWING_CONFIG.horizontalPadding
+    const drawingAreaStartHorizontalSnapped = translateAbsoluteCoordinateToDot(coreState, startingPositionHorizontal);
     return {
-        x: drawingAreaStartHorizontal,
+        x: drawingAreaStartHorizontalSnapped,
         y: drawingAreaStartVertical
     }
 
@@ -178,7 +175,7 @@ function getHorizontalDrawingStartInCenter(coreState: PublicCoreState, shape: Sh
     const canvasWidth = coreState.canvas.getBoundingClientRect().width;
     const shapeWidth = getShapeWidth(shape, cellSize);
     const absoluteStartHorizontal = canvasWidth / 2 - shapeWidth / 2;
-    const drawingStartHorizontal = transformAbsoluteCoordinateToDot(coreState, absoluteStartHorizontal);
+    const drawingStartHorizontal = translateAbsoluteCoordinateToDot(coreState, absoluteStartHorizontal);
 
     return drawingStartHorizontal;
 
@@ -189,7 +186,7 @@ function getVerticalDrawingStartInCenter(coreState: PublicCoreState, shape: Shap
     const canvasHeight = coreState.canvas.getBoundingClientRect().height;
     const shapeHeight = getShapeHeight(shape, cellSize);
     const absoluteCenter = canvasHeight / 2 - shapeHeight / 2;
-    return transformAbsoluteCoordinateToDot(coreState, absoluteCenter);
+    return translateAbsoluteCoordinateToDot(coreState, absoluteCenter);
 }
 
 
@@ -209,7 +206,7 @@ function getSideAreaWidth(coreState: PublicCoreState) {
  * @param coordinate The x/y coordinate to translate to dot coordinates
  * @returns the new transformed coordinate
  */
-function transformAbsoluteCoordinateToDot(coreState: PublicCoreState, coordinate: number) {
+function translateAbsoluteCoordinateToDot(coreState: PublicCoreState, coordinate: number) {
     const cellSize = coreState.grid.cellSize;
     // since dots land in the middle of cells we remove half a cell
     const dotIndex = Math.round((coordinate - cellSize / 2) / cellSize);
@@ -223,15 +220,13 @@ function transformAbsoluteCoordinateToDot(coreState: PublicCoreState, coordinate
 function drawSegment(coreState: PublicCoreState, mainState: ShapeDrawerState, segment: SegmentWithShouldDrawFlag, drawDotFunction: DrawDotFunction, drawLineFunction: DrawLineFunction) {
     const joinedState = { ...coreState, ...mainState };
     const context = coreState.context;
-    context.beginPath();
 
     context.globalAlpha = getOpacityFromBrightness(segment.brightness);
     context.strokeStyle = joinedState.accentColor;
     context.lineWidth = getLineThickness(joinedState.grid.baseDotRadius);
-    const { dot1, dot2 } = getGlobalDotPositions(joinedState, segment.dot1, segment.dot2);
 
     context.beginPath();
-    drawLineFunction(dot1, dot2);
+    drawLineFunction(segment.dot1, segment.dot2);
     context.stroke();
 
     drawDots(segment, drawDotFunction, joinedState);
@@ -245,16 +240,21 @@ function drawDots(segment: SegmentWithShouldDrawFlag, drawDotFunction: DrawDotFu
     const dot2 = segment.dot2;
     const dots = [dot1, dot2];
 
-    context.beginPath();
+
+    // currently we could draw a bright dot because a dot happens to sit on another bright dot area even though 
+    // the bright dot appears much later, we could resolve this in the draw function instead of precalculate it
+    // if it becomes an issue
     for (const dot of dots) {
         // the first one already "guarantees" the other by the code but this makes it defensive
         if (dot.shouldDraw && dot.brightness !== undefined) {
+            context.beginPath();
             context.globalAlpha = getOpacityFromBrightness(dot.brightness);
             const scale = getScaleFromBrightness(dot.brightness);
             drawDotFunction(dot, scale);
+            context.fill();
+
         }
     }
-    context.fill();
 }
 
 
@@ -263,6 +263,7 @@ function getDotsToDrawWithoutCollisions(segments: Segment[]): Map<number, DotWit
     for (const segment of segments) {
         const dot1 = segment.dot1;
         const dot2 = segment.dot2;
+
         const brightness = segment.brightness;
 
         const key1 = getDotKeyForMap(dot1);
@@ -281,11 +282,11 @@ function getDotsToDrawWithoutCollisions(segments: Segment[]): Map<number, DotWit
 }
 
 function getDotKeyForMap(dot: Dot) {
-    return dot.x * 100 + dot.y;
+    return dot.x * 1000 + dot.y;
 }
 
 
-function getSegmentsToDrawWithoutCollisions(segments: Segment[]): SegmentWithShouldDrawFlag[] {
+function getSegmentsToDrawWithoutCollisions(joinedState: JoinedState, segments: Segment[]): SegmentWithShouldDrawFlag[] {
     // go over the list
     // check if the dict has it, if it does add it and remove it, set the should draw to true
     // if it doesnt add it but set the should draw to false
@@ -302,8 +303,11 @@ function getSegmentsToDrawWithoutCollisions(segments: Segment[]): SegmentWithSho
         const dot1FromMap = dotsToDrawWithoutCollisions.get(dot1Key);
         const dot2FromMap = dotsToDrawWithoutCollisions.get(dot2Key);
 
-        let dot1ToAdd: DotWithDrawingFlag = { ...dot1, shouldDraw: dot1FromMap != undefined, brightness: dot1FromMap?.brightness };
-        let dot2ToAdd: DotWithDrawingFlag = { ...dot1, shouldDraw: dot2FromMap != undefined, brightness: dot1FromMap?.brightness };
+        const { dot1: globalDot1, dot2: globalDot2 } = getGlobalDotPositions(joinedState, dot1, dot2);
+
+
+        let dot1ToAdd: DotWithDrawingFlag = { ...globalDot1, shouldDraw: dot1FromMap != undefined, brightness: dot1FromMap?.brightness };
+        let dot2ToAdd: DotWithDrawingFlag = { ...globalDot2, shouldDraw: dot2FromMap != undefined, brightness: dot2FromMap?.brightness };
 
         dotsToDrawWithoutCollisions.delete(dot1Key);
         dotsToDrawWithoutCollisions.delete(dot2Key);
@@ -321,24 +325,23 @@ function getGlobalDotPositions(state: JoinedState, dot1: Dot, dot2: Dot): { dot1
     return { dot1: dot1InGlobalCoords, dot2: dot2InGlobalCoords }
 }
 
-function getSegmentsToDraw(state: ShapeDrawerState): Segment[] {
+function getSegmentsToDraw(state: ShapeDrawerState): SegmentWithShouldDrawFlag[] {
     const progress = getAnimationProgress(state);
 
     // it's not called index because it's not an index, it goes till max length
     const endPosition = animationProgressToSegment(progress, state);
-    return state.shape.segments.slice(0, endPosition);
+    return state.allSegments.slice(0, endPosition);
 }
 
 
 function translateGridPositionToGlobalPosition(state: JoinedState, gridCoordinates: Position): Position {
     const cellSize = state.grid.cellSize;
     const drawingAreaStart = state.drawingAreaStart; // this is the [0, 0] basically of the drwaing
-    const verticalShiftFromStart = gridCoordinates.y * cellSize;
-    const horizontalShiftFromStart = gridCoordinates.x * cellSize;
-    return {
-        x: drawingAreaStart.x + horizontalShiftFromStart,
-        y: drawingAreaStart.y + verticalShiftFromStart
-    }
+    const verticalShiftFromOrigin = gridCoordinates.y * cellSize;
+    const horizontalShiftFromOrigin = gridCoordinates.x * cellSize;
+    const x = drawingAreaStart.x + horizontalShiftFromOrigin;
+    const y = drawingAreaStart.y + verticalShiftFromOrigin;
+    return { x, y }
 }
 
 function getAnimationProgress(state: ShapeDrawerState): number {
@@ -365,6 +368,8 @@ function setupListeners(state: ShapeDrawerState): AbortController {
     // window.addEventListener("mousemove", (e) => updateMousePositionState(e, state), { signal })
     // document.addEventListener("mouseenter", (e) => updateMousePositionState(e, state), { signal });
     // document.addEventListener("mouseleave", () => updateMousePositionStateOnLeave(state), { signal });
+    // incase something updates for some reason
+    document.addEventListener('load', () => { state.maxScrollPosition = getMaxScrollHeight(); })
     document.addEventListener('scroll', () => updateScrollPosition(state), { signal });
     return controller;
 }
