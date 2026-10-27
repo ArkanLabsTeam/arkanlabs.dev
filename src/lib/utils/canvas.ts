@@ -1,5 +1,5 @@
 export function setupCanvasResolution(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2); // || since it's limited availability, not all browsers support it
     const { width, height } = canvas.getBoundingClientRect();
 
     canvas.width = width * dpr;

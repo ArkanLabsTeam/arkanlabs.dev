@@ -12,6 +12,7 @@ type CoreState = {
     previousLoopRun: number | null
     requestFrame: RequestFrameFunction,
     prefersReducedMotion: boolean
+    resizeObserver: ResizeObserver | null
 }
 
 type Grid = {
@@ -28,7 +29,7 @@ type GridSize = {
     rows: number
 }
 
-type WindowResizeCallback = (state: CoreState) => void;
+type CanvasResizeCallback = (state: CoreState) => void;
 
 export type PublicCoreState = {
     canvas: HTMLCanvasElement,
@@ -82,7 +83,6 @@ export function setupCoreLoop(effect: Effect) {
     const { canvas, ctx } = canvasSetup;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const grid = gridAndDotSetup(canvas)
-
     const requestFrame = () => {
         if (coreState.pendingFrame != null) return;
         coreState.pendingFrame = requestAnimationFrame((now) => coreLoop(coreState, now));
@@ -107,8 +107,12 @@ export function setupCoreLoop(effect: Effect) {
         baseColor: getBaseColor(),
         previousLoopRun: null,
         requestFrame: requestFrame,
-        prefersReducedMotion: prefersReducedMotion
+        prefersReducedMotion: prefersReducedMotion,
+        resizeObserver: null
     }
+    coreState.resizeObserver = setupResizeObserver(coreState);
+    coreState.resizeObserver.observe(canvas); // use .disconnect() to disable
+
     setupCanvasResolution(canvas, ctx);
     coreState.abortController = createListeners(coreState);
 
@@ -149,7 +153,7 @@ function getStepScale(elapsedTime: number): number {
 
 // dots and grid setup area
 function gridAndDotSetup(canvas: HTMLCanvasElement): Grid {
-    const gridScale = getGridScale();
+    const gridScale = getGridScale(canvas);
     const cellSize = getCellSize(gridScale);
     const gridSize = setupGridSize(canvas, cellSize);
     const dots = setupDots(gridSize, cellSize);
@@ -174,13 +178,14 @@ function setupDots(gridSize: GridSize, cellSize: number): Dot[][] {
     return dots;
 }
 
-function getGridScale(): number {
+function getGridScale(canvas: HTMLCanvasElement): number {
     const scaleSteps = DOT_GRID_CONFIG.scaleSteps;
-    const windowHeight = window.innerHeight;
-    const verticalScale = windowHeight / DOT_GRID_CONFIG.defaultVerticalResolution;
+    const boundingRect = canvas.getBoundingClientRect();
+    const canvasHeight = boundingRect.height;
+    const verticalScale = canvasHeight / DOT_GRID_CONFIG.defaultVerticalResolution;
 
-    const windowWidth = window.innerWidth;
-    const horizontalScale = windowWidth / DOT_GRID_CONFIG.defaultHorizontalResolution;
+    const canvasWidth = boundingRect.width;
+    const horizontalScale = canvasWidth / DOT_GRID_CONFIG.defaultHorizontalResolution;
 
     // phones are much taller than wide so we need the smaller scale 
     // (which mean biggest difference from base)
@@ -252,8 +257,6 @@ function createListeners(state: CoreState): AbortController {
     const { signal } = controller;
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-    const debounceFunction = debounceDotRebuild(200);
-    window.addEventListener("resize", () => debounceFunction(state), { signal });
     motionQuery.addEventListener('change', (e) => updatePreferReducedMotion(e, state), { signal });
     return controller;
 }
@@ -263,15 +266,21 @@ function updatePreferReducedMotion(e: MediaQueryListEvent, state: CoreState) {
     state.requestFrame();
 }
 
+function setupResizeObserver(state: CoreState): ResizeObserver {
+    const debounceFunction = debounceDotRebuild(200);
+    return new ResizeObserver(() => debounceFunction(state));
+}
 
-function debounceDotRebuild(delay: number): WindowResizeCallback {
+
+function debounceDotRebuild(delay: number): CanvasResizeCallback {
     const debounceWrapper = debounce(
-        windowResizeCallback, delay
+        canvasResizeCallback, delay
     );
     return debounceWrapper;
 }
 
-const windowResizeCallback: WindowResizeCallback = (state) => {
+const canvasResizeCallback: CanvasResizeCallback = (state) => {
+    if (state.resizeObserver == null) return; // skipping the first run
     setupCanvasResolution(state.canvas, state.context);
     const grid = gridAndDotSetup(state.canvas);
     Object.assign(state.grid, grid);

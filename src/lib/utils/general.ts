@@ -1,8 +1,12 @@
 export type Position = { x: number, y: number }
+interface DebounceFunction<T extends unknown[]> {
+    (...arg: T): void;
+}
 
-export function debounce(func: Function, delay: number) {
-    let timeout: number;
-    return function (this: unknown, ...args: any) {
+
+export function debounce<T extends unknown[]>(func: DebounceFunction<T>, delay: number): DebounceFunction<T> {
+    let timeout: ReturnType<typeof setTimeout>;
+    return function (this: unknown, ...args: T) {
         // this can be anything
         // this is not passed as an argument, it's taken from the caller
         // this is a reserved keyword not an argument, that's why it's confusing
