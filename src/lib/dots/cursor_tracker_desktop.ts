@@ -1,4 +1,4 @@
-import { setupCoreLoop, type DrawDotFunction, type EffectSetupFunction, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
+import { dotDistance, setupCoreLoop, type DrawDotFunction, type EffectSetupFunction, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
 import { closeTo, interpolation, smoothStep, type Position } from "../utils/general"
 
 type MainPageDesktopState = {
@@ -116,9 +116,7 @@ function drawCloseDots(state: MainPageDesktopState, coreState: PublicCoreState, 
     context.fillStyle = state.accentColor;
     for (const row of coreState.grid.dots) {
         for (const dot of row) {
-            const glowCenterDotXDifference = (state.glow.x - dot.x);
-            const glowCenterDotYDifference = (state.glow.y - dot.y);
-            const distanceFromGlowCenter = Math.hypot(glowCenterDotXDifference, glowCenterDotYDifference);
+            const distanceFromGlowCenter = dotDistance(state.glow, dot);
 
             if (distanceFromGlowCenter < GLOW_ANIMATION_CONFIG.glowRadius) {
                 context.beginPath();

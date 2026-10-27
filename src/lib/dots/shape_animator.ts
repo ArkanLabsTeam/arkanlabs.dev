@@ -1,5 +1,5 @@
-import { getAccentColor, setupCoreLoop, type Dot, type DrawDotFunction, type DrawLineFunction, type EffectSetupFunction, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
-import { smoothStep, type Position } from "../utils/general"
+import { dotDistance, getAccentColor, getBaseColor, setupCoreLoop, type Dot, type DrawDotFunction, type DrawLineFunction, type EffectSetupFunction, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
+import { clamp, smoothStep, type Position } from "../utils/general"
 import { Brightness, getLineThickness, getOpacityFromBrightness, getScaleFromBrightness, getShapeHeight, getShapeWidth, type Segment, type Shape } from "./shapes/shape_utils";
 import { alShape } from "./shapes/AL_shape";
 import { getMaxScrollHeight, isDocumentScrollable } from "../utils/document";
@@ -14,6 +14,8 @@ type ShapeDrawerState = {
     maxScrollPosition: number
     segmentsToDraw: SegmentWithShouldDrawFlag[]
     allSegments: SegmentWithShouldDrawFlag[]
+    dotsMap: Map<number, Dot>
+    baseColor: string
 }
 
 // only use as arguments or per-update, don't store.
@@ -28,7 +30,8 @@ type SegmentWithShouldDrawFlag = {
 }
 const SHAPE_DRAWING_CONFIG = {
     mainAreaId: "main-space",
-    horizontalPadding: 10
+    horizontalPadding: 10,
+    backgroundDotOpacityDecrease: 50,
 } as const;
 
 /**
@@ -44,6 +47,9 @@ function setupMainLoop(shape: Shape): void {
         const maxScrollPosition = getMaxScrollHeight();
         const currentScrollPosition = window.scrollY;
         if (!drawingAreaStart) throw Error("Can't load drawing area");
+        const segmentsWithoutCollisions = getSegmentsToDrawWithoutCollisions(drawingAreaStart, coreState, shape.segments)
+        const dotsMap = getDotsToDrawWithoutCollisions(coreState, mainState.allSegments);
+
         drawDotFunction = drawDot;
         drawLineFunction = drawLine;
         mainState = {
@@ -55,12 +61,11 @@ function setupMainLoop(shape: Shape): void {
             scrollPosition: currentScrollPosition,
             maxScrollPosition,
             segmentsToDraw: [],
-            allSegments: []
+            allSegments: segmentsWithoutCollisions,
+            dotsMap,
+            baseColor: getBaseColor()
         }
-        const joinedState = { ...mainState, ...coreState };
-        mainState.allSegments = getSegmentsToDrawWithoutCollisions(joinedState, shape.segments)
         abortController = setupListeners(mainState);
-
     }
 
     const cleanup = () => {
@@ -80,10 +85,9 @@ function setupMainLoop(shape: Shape): void {
     }
 
     const draw = (coreState: PublicCoreState) => {
-        const joinedState = {...coreState, ...mainState}
+        const joinedState = { ...coreState, ...mainState }
         for (let segment of mainState.segmentsToDraw) {
             drawSegment(joinedState, segment, drawDotFunction, drawLineFunction);
-            lowerBackgroundDotOpacity(joinedState, segment, drawDotFunction);
         }
     }
 
@@ -94,10 +98,8 @@ function setupMainLoop(shape: Shape): void {
 
         mainState.drawingAreaStart = drawingAreaStart;
         mainState.maxScrollPosition = getMaxScrollHeight();
-        const joinedState = { ...mainState, ...coreState };
 
-
-        mainState.allSegments = getSegmentsToDrawWithoutCollisions(joinedState, shape.segments)
+        mainState.allSegments = getSegmentsToDrawWithoutCollisions(drawingAreaStart, coreState, shape.segments)
         mainState.canScroll = canScroll;
     };
 
@@ -259,14 +261,51 @@ function drawDots(segment: SegmentWithShouldDrawFlag, drawDotFunction: DrawDotFu
     }
 }
 
-function lowerBackgroundDotOpacity(joinedState: JoinedState, segment: SegmentWithShouldDrawFlag, drawDot: DrawDotFunction) {
-    // create an area bigger than the actual shape size by "opacity decrease" distance from each size
-    // go though each dot in that area and calculate it's opacity from the nearest dot
-    // for each dot, only go as far as the max distance, no need to scan further than how far the effect can reach anyways
+function lowerBackgroundDotOpacity(joinedState: JoinedState, dot: Dot, drawDot: DrawDotFunction) {
+    const context = joinedState.context;
+    const dotMap = joinedState.dotsMap;
+    const gridWidth = joinedState.grid.columns;
+    const gridHeight = joinedState.grid.rows;
+
+    const center = translateGlobalPositionToGridIndex(joinedState, dot);
+    const radiusInGridFormat = getRadiusInGridIndices(joinedState);
+    const start = getOpacityDecreaseEffectStartCoordinate(center, radiusInGridFormat);
+    const diameterInGridFormatClampedWidth = Math.min(radiusInGridFormat * 2, gridWidth - start.x);
+    const diameterInGridFormatClamped2D = Math.min(diameterInGridFormatClampedWidth, gridHeight - start.y);
+
+
+    for (let i = 0; i < diameterInGridFormatClamped2D; i++) {
+        for (let j = 0; j < diameterInGridFormatClamped2D; j++) {
+            const dotToDecreaseOpacity: Dot = { x: start.x + j, y: start.y + i };
+            const dotKey = getDotKeyForMap(dotToDecreaseOpacity);
+            if (dotMap.get(dotKey) != undefined) continue;
+
+            const distanceFromCenter = dotDistance(dotToDecreaseOpacity, center);
+            const reversedSmoothStepValue = 1 - smoothStep(distanceFromCenter, 0, distanceFromCenter);
+            context.globalAlpha = reversedSmoothStepValue;
+            context.fillStyle = joinedState.baseColor;
+            context.beginPath();
+            drawDot(dotToDecreaseOpacity, 1.1);
+            context.fill();
+        }
+    }
+
+    // we should create a wrapper and have it pass an opacity map,
+    // everytime we add a dot we check if the opacity exists, if it doesnt we add this one
+    // if there is we just take the max opacity, that way we don't have higher opacity dots that shouldn't be higher
+    // it's oddly similiar to how we choose the dot brightness
+
+
+    // on each dot, draw a square that is diameter^2 area of the opacity decrease radius
+    // instead of using pixels to calculate, use the grid area array
+    // since we have the cellsize we can use it to calculate indices, 
+    // going up a row is cellsize up and going across a col is cellsize that way
+    // smoothstep to find out the opacity, we decrease the opacity by drawing dots in the background color
+    // if the dot location we chose exists in the hashmap of dots, continue the loop
 }
 
 
-function getDotsToDrawWithoutCollisions(segments: Segment[]): Map<number, DotWithBrightness | undefined> {
+function getDotsToDrawMapWithBrightness(segments: Segment[]): Map<number, DotWithBrightness | undefined> {
     const map: Map<number, DotWithBrightness> = new Map();
     for (const segment of segments) {
         const dot1 = segment.dot1;
@@ -289,17 +328,57 @@ function getDotsToDrawWithoutCollisions(segments: Segment[]): Map<number, DotWit
     return map;
 }
 
+function getDotsToDrawWithoutCollisions(state: PublicCoreState, segments: SegmentWithShouldDrawFlag[]): Map<number, Dot> {
+    const map: Map<number, Dot> = new Map();
+    for (const segment of segments) {
+        const dot1 = segment.dot1;
+        const dot2 = segment.dot2;
+        const dots = [dot1, dot2];
+        for (const dot of dots) {
+            if (dot.shouldDraw) {
+                const dotInGridIndex = translateGlobalPositionToGridIndex(state, dot);
+                const key = getDotKeyForMap(dotInGridIndex);
+                map.set(key, dot);
+            }
+        }
+    }
+
+
+    return map;
+}
+
+function getOpacityDecreaseEffectStartCoordinate(center: Position, radius: number): Position {
+    const x = center.x - radius;
+    const y = center.y - radius;
+    return { x, y }
+}
+
+function getRadiusInGridIndices(state: PublicCoreState) {
+    const cellSize = state.grid.cellSize;
+    const radius = SHAPE_DRAWING_CONFIG.backgroundDotOpacityDecrease;
+    return Math.max(Math.round(radius / cellSize), 1);
+}
+
+function translateGlobalPositionToGridIndex(state: PublicCoreState, dot: Dot): Dot {
+    const cellSize = state.grid.cellSize;
+    const x = (dot.x - cellSize / 2) / cellSize;
+    const y = (dot.x - cellSize / 2) / cellSize;
+    return { x, y };
+}
+
+/**
+* To use this function you must ensure that all places that use the Map this key is for use the same origin.
+* Some dots use css px format, others use coordiates local to shape start and others use global grid coordinates
+*/
 function getDotKeyForMap(dot: Dot) {
-    return dot.x * 1000 + dot.y;
+
+    return dot.x * 10_000 + dot.y;
 }
 
 
-function getSegmentsToDrawWithoutCollisions(joinedState: JoinedState, segments: Segment[]): SegmentWithShouldDrawFlag[] {
-    // go over the list
-    // check if the dict has it, if it does add it and remove it, set the should draw to true
-    // if it doesnt add it but set the should draw to false
+function getSegmentsToDrawWithoutCollisions(drawingAreaStart: Position, state: PublicCoreState, segments: Segment[]): SegmentWithShouldDrawFlag[] {
     const newSegments: SegmentWithShouldDrawFlag[] = [];
-    const dotsToDrawWithoutCollisions = getDotsToDrawWithoutCollisions(segments);
+    const dotsToDrawWithoutCollisions = getDotsToDrawMapWithBrightness(segments);
     for (const segment of segments) {
         const dot1 = segment.dot1;
         const dot2 = segment.dot2;
@@ -311,7 +390,7 @@ function getSegmentsToDrawWithoutCollisions(joinedState: JoinedState, segments: 
         const dot1FromMap = dotsToDrawWithoutCollisions.get(dot1Key);
         const dot2FromMap = dotsToDrawWithoutCollisions.get(dot2Key);
 
-        const { dot1: globalDot1, dot2: globalDot2 } = getGlobalDotPositions(joinedState, dot1, dot2);
+        const { dot1: globalDot1, dot2: globalDot2 } = getGlobalDotPositions(drawingAreaStart, state, dot1, dot2);
 
 
         let dot1ToAdd: DotWithDrawingFlag = { ...globalDot1, shouldDraw: dot1FromMap != undefined, brightness: dot1FromMap?.brightness };
@@ -327,9 +406,9 @@ function getSegmentsToDrawWithoutCollisions(joinedState: JoinedState, segments: 
 
 }
 
-function getGlobalDotPositions(state: JoinedState, dot1: Dot, dot2: Dot): { dot1: Dot, dot2: Dot } {
-    const dot1InGlobalCoords = translateGridPositionToGlobalPosition(state, dot1);
-    const dot2InGlobalCoords = translateGridPositionToGlobalPosition(state, dot2);
+function getGlobalDotPositions(drawingAreaStart: Position, state: PublicCoreState, dot1: Dot, dot2: Dot): { dot1: Dot, dot2: Dot } {
+    const dot1InGlobalCoords = translateGridPositionToGlobalPosition(drawingAreaStart, state, dot1);
+    const dot2InGlobalCoords = translateGridPositionToGlobalPosition(drawingAreaStart, state, dot2);
     return { dot1: dot1InGlobalCoords, dot2: dot2InGlobalCoords }
 }
 
@@ -342,9 +421,10 @@ function getSegmentsToDraw(state: ShapeDrawerState): SegmentWithShouldDrawFlag[]
 }
 
 
-function translateGridPositionToGlobalPosition(state: JoinedState, gridCoordinates: Position): Position {
+
+
+function translateGridPositionToGlobalPosition(drawingAreaStart: Position, state: PublicCoreState, gridCoordinates: Position): Position {
     const cellSize = state.grid.cellSize;
-    const drawingAreaStart = state.drawingAreaStart; // this is the [0, 0] basically of the drwaing
     const verticalShiftFromOrigin = gridCoordinates.y * cellSize;
     const horizontalShiftFromOrigin = gridCoordinates.x * cellSize;
     const x = drawingAreaStart.x + horizontalShiftFromOrigin;

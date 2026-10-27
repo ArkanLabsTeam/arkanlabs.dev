@@ -221,6 +221,13 @@ function drawDot(context: CanvasRenderingContext2D, dot: Dot, scale: number = 1)
     context.arc(dot.x, dot.y, radius, 0, Math.PI * 2);
 }
 
+export function dotDistance(dot1: Dot, dot2: Dot) {
+    const xDifference = (dot1.x - dot2.x);
+    const yDifference = (dot1.y - dot2.y);
+    return Math.hypot(xDifference, yDifference);
+}
+
+
 function drawLine(context: CanvasRenderingContext2D, ...dots: Dot[]) {
     // thickness is control from context which can be done from the effect
     for (let i = 1; i < dots.length; i++) {
@@ -289,7 +296,7 @@ const canvasResizeCallback: CanvasResizeCallback = (state) => {
 }
 
 // colors
-function getBaseColor() {
+export function getBaseColor() {
     const root = document.documentElement;
     return window.getComputedStyle(root).getPropertyValue("--color-border").trim();
 }
