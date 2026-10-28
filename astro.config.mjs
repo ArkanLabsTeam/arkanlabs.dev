@@ -33,7 +33,9 @@ export default defineConfig({
     cssVariable: "--font-mono"
   }
   ],
+
   vite: {
     plugins: [tailwindcss()],
-  }
+  },
+
 });
