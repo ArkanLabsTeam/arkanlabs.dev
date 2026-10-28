@@ -1,4 +1,4 @@
-import { dotDistance, getAccentColor, getBaseColor, setupCoreLoop, type Dot, type DrawDotFunction, type DrawLineFunction, type EffectSetupFunction, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
+import { dotDistance, getAccentColor, getBackgroundColor, getBaseColor, setupCoreLoop, type Dot, type DrawDotFunction, type DrawLineFunction, type EffectSetupFunction, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
 import { clamp, smoothStep, type Position } from "../utils/general"
 import { Brightness, getLineThickness, getOpacityFromBrightness, getScaleFromBrightness, getShapeHeight, getShapeWidth, type Segment, type Shape } from "./shapes/shape_utils";
 import { alShape } from "./shapes/AL_shape";
@@ -15,7 +15,8 @@ type ShapeDrawerState = {
     segmentsToDraw: SegmentWithShouldDrawFlag[]
     allSegments: SegmentWithShouldDrawFlag[]
     dotsMap: Map<number, Dot>
-    baseColor: string
+    backgroundColor: string
+    backgroundOpacityMap: Map<number, DotWithBrightness>
 }
 
 // only use as arguments or per-update, don't store.
@@ -48,7 +49,7 @@ function setupMainLoop(shape: Shape): void {
         const currentScrollPosition = window.scrollY;
         if (!drawingAreaStart) throw Error("Can't load drawing area");
         const segmentsWithoutCollisions = getSegmentsToDrawWithoutCollisions(drawingAreaStart, coreState, shape.segments)
-        const dotsMap = getDotsToDrawWithoutCollisions(coreState, mainState.allSegments);
+        const dotsMap = getDotsToDrawWithoutCollisions(coreState, segmentsWithoutCollisions);
 
         drawDotFunction = drawDot;
         drawLineFunction = drawLine;
@@ -63,7 +64,8 @@ function setupMainLoop(shape: Shape): void {
             segmentsToDraw: [],
             allSegments: segmentsWithoutCollisions,
             dotsMap,
-            baseColor: getBaseColor()
+            backgroundColor: getBackgroundColor(),
+            backgroundOpacityMap: new Map()
         }
         abortController = setupListeners(mainState);
     }
@@ -74,19 +76,25 @@ function setupMainLoop(shape: Shape): void {
 
     // "_" is the time scale.
     const update = (coreState: PublicCoreState, _: number): boolean => {
+        const joinedState = { ...coreState, ...mainState };
         if (!mainState.canScroll || coreState.prefersReducedMotion) {
             // shape appears fully drawed
             mainState.segmentsToDraw = mainState.allSegments;
+            resetAndFillOpacityMap(joinedState);
             return false;
         }
 
         mainState.segmentsToDraw = getSegmentsToDraw(mainState);
+        resetAndFillOpacityMap(joinedState);
+
         return false
     }
 
     const draw = (coreState: PublicCoreState) => {
         const joinedState = { ...coreState, ...mainState }
-        for (let segment of mainState.segmentsToDraw) {
+        reduceBackgroundOpacityAroundShape(joinedState, drawDotFunction);
+        
+        for (const segment of mainState.segmentsToDraw) {
             drawSegment(joinedState, segment, drawDotFunction, drawLineFunction);
         }
     }
@@ -261,19 +269,52 @@ function drawDots(segment: SegmentWithShouldDrawFlag, drawDotFunction: DrawDotFu
     }
 }
 
-function lowerBackgroundDotOpacity(joinedState: JoinedState, dot: Dot, drawDot: DrawDotFunction) {
-    const context = joinedState.context;
+function reduceBackgroundOpacityAroundShape(state: JoinedState, drawDot: DrawDotFunction) {
+    const map = state.backgroundOpacityMap;
+    const context = state.context;
+    context.fillStyle = state.backgroundColor;
+
+    for (const dot of map.values()) {
+        const dotInGlobalFormat = translateGridIndexToGlobalPosition(state, dot);
+        
+        const brightness = dot.brightness;
+        if (brightness == 0) continue;
+        context.globalAlpha = brightness;
+        context.beginPath()
+        drawDot(dotInGlobalFormat, 1.1);
+        context.fill();
+    }
+}
+
+function resetAndFillOpacityMap(state: JoinedState) {
+    const segmentsToDraw = state.segmentsToDraw;
+    const map = state.backgroundOpacityMap;
+    map.clear();
+    for (const segment of segmentsToDraw) {
+        const dot1 = segment.dot1;
+        const dot2 = segment.dot2;
+        const dots = [dot1, dot2];
+        for (const dot of dots) {
+            if (dot.shouldDraw) {
+                lowerBackgroundDotOpacity(state, dot)
+            }
+        }
+    }
+}
+
+
+function lowerBackgroundDotOpacity(joinedState: JoinedState, dot: Dot) {
     const dotMap = joinedState.dotsMap;
     const gridWidth = joinedState.grid.columns;
     const gridHeight = joinedState.grid.rows;
+    const opacityMap = joinedState.backgroundOpacityMap;
 
     const center = translateGlobalPositionToGridIndex(joinedState, dot);
+
     const radiusInGridFormat = getRadiusInGridIndices(joinedState);
     const start = getOpacityDecreaseEffectStartCoordinate(center, radiusInGridFormat);
     const diameterInGridFormatClampedWidth = Math.min(radiusInGridFormat * 2, gridWidth - start.x);
     const diameterInGridFormatClamped2D = Math.min(diameterInGridFormatClampedWidth, gridHeight - start.y);
-
-
     for (let i = 0; i < diameterInGridFormatClamped2D; i++) {
         for (let j = 0; j < diameterInGridFormatClamped2D; j++) {
             const dotToDecreaseOpacity: Dot = { x: start.x + j, y: start.y + i };
@@ -281,27 +322,12 @@ function lowerBackgroundDotOpacity(joinedState: JoinedState, dot: Dot, drawDot: 
             if (dotMap.get(dotKey) != undefined) continue;
 
             const distanceFromCenter = dotDistance(dotToDecreaseOpacity, center);
-            const reversedSmoothStepValue = 1 - smoothStep(distanceFromCenter, 0, distanceFromCenter);
-            context.globalAlpha = reversedSmoothStepValue;
-            context.fillStyle = joinedState.baseColor;
-            context.beginPath();
-            drawDot(dotToDecreaseOpacity, 1.1);
-            context.fill();
+            const reversedSmoothStepValue = 1 - smoothStep(distanceFromCenter, 0, radiusInGridFormat);
+            const currentOpacity = opacityMap.get(dotKey)?.brightness;
+            const opacity = Math.max(currentOpacity ?? 0, reversedSmoothStepValue);
+            opacityMap.set(dotKey, { ...dotToDecreaseOpacity, brightness: opacity });
         }
     }
-
-    // we should create a wrapper and have it pass an opacity map,
-    // everytime we add a dot we check if the opacity exists, if it doesnt we add this one
-    // if there is we just take the max opacity, that way we don't have higher opacity dots that shouldn't be higher
-    // it's oddly similiar to how we choose the dot brightness
-
-
-    // on each dot, draw a square that is diameter^2 area of the opacity decrease radius
-    // instead of using pixels to calculate, use the grid area array
-    // since we have the cellsize we can use it to calculate indices, 
-    // going up a row is cellsize up and going across a col is cellsize that way
-    // smoothstep to find out the opacity, we decrease the opacity by drawing dots in the background color
-    // if the dot location we chose exists in the hashmap of dots, continue the loop
 }
 
 
@@ -361,10 +387,19 @@ function getRadiusInGridIndices(state: PublicCoreState) {
 
 function translateGlobalPositionToGridIndex(state: PublicCoreState, dot: Dot): Dot {
     const cellSize = state.grid.cellSize;
-    const x = (dot.x - cellSize / 2) / cellSize;
-    const y = (dot.x - cellSize / 2) / cellSize;
+    const x = Math.round((dot.x - cellSize / 2) / cellSize);
+    const y = Math.round((dot.y - cellSize / 2) / cellSize);
     return { x, y };
 }
+
+function translateGridIndexToGlobalPosition(state: PublicCoreState, dot: Dot): Dot {
+    const cellSize = state.grid.cellSize;
+    const x = dot.x * cellSize + cellSize / 2;
+    const y = dot.y * cellSize + cellSize / 2;
+    return { x, y }
+
+}
+
 
 /**
 * To use this function you must ensure that all places that use the Map this key is for use the same origin.

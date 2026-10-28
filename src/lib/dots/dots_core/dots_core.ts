@@ -301,6 +301,11 @@ export function getBaseColor() {
     return window.getComputedStyle(root).getPropertyValue("--color-border").trim();
 }
 
+export function getBackgroundColor() {
+     const root = document.documentElement;
+    return window.getComputedStyle(root).getPropertyValue("--color-bg").trim();
+}
+
 export function getAccentColor() {
     const root = document.documentElement;
     return window.getComputedStyle(root).getPropertyValue("--color-accent").trim();
