@@ -1,11 +1,27 @@
 ---
-import DotGrid from "../../components/DotGrid.astro";
+import { getCollection } from "astro:content";
+import ListSection from "../../components/ListSection.astro";
 import BaseLayout from "../../layout/BaseLayout.astro";
-
-
+import { links } from "../../lib/utils/consts";
+const docs = await getCollection("rihlaLegal");
+const currentPath = Astro.url.pathname;
 ---
+
 <BaseLayout title="Rihla Legal · Arkan Labs">
-    <DotGrid />
-    hello
-	<script src="../../lib/dots/cursor_tracker_desktop.ts"></script>
+    <div class="mb-80 3xl:mb-10">
+        <ListSection
+            title="Rihla TOS and Privacy Policy"
+        >
+            {
+                docs.map((doc: any) => (
+                    <li class="mb-2 flex gap-1 text-center">
+                        <p>•</p>
+                        <a class="text-accent" href={`${links.rihla.href}/${doc.id}`}>{doc.data.title}</a>
+                    </li>
+                ))
+            }
+        </ListSection>
+    </div>
+
+    <script src="../../lib/dots/cursor_tracker_desktop.ts"></script>
 </BaseLayout>

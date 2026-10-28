@@ -3,9 +3,10 @@ import { Font } from "astro:assets";
 import Navbar from "../components/Navbar.astro";
 import "../styles/global.css";
 import Footer from "../components/Footer.astro";
+import DotGrid from "../components/DotGrid.astro";
 
 const { title } = Astro.props;
-const sharedClasses = "mx-auto max-w-4xl px-4 md:px-6";
+const sharedClasses = "mx-auto max-w-4xl px-4 md:px-6 w-full";
 ---
 
 <!doctype html>
@@ -29,6 +30,7 @@ const sharedClasses = "mx-auto max-w-4xl px-4 md:px-6";
         ]} id="main-space">
             <slot />
         </main>
+        <DotGrid />
         <Footer class={sharedClasses} />
     </body>
 </html>

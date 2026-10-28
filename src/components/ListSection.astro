@@ -1,0 +1,19 @@
+---
+import Section from "./Section.astro";
+
+type Props = {
+    title: string;
+    eyebrowTitle?:string;
+    id?: string;
+    class?: string;
+};
+const { title, eyebrowTitle, class: className, id} = Astro.props;
+
+---
+
+
+<Section title={title} eyebrowTitle={eyebrowTitle} class={className} id={id}>
+    <ul class="mt-4">
+        <slot />
+    </ul>
+</Section>

@@ -13,13 +13,19 @@ type LinkEntry = {
 }
 
 
-export const links: LinkEntry[] = [
-    { href: "/values", label: "Values", mode: "Navbar" },
-    { href: "/rihla/legal", label: "Rihla Legal", mode: "Legal" },
-    {href: "/#aboutus", label:"About Us", mode: "Section"}
-] as const;
 
+export const links = {
+    rihla: {
+        href: "/rihla/legal", label: "Rihla Legal", mode: "Legal"
+    },
+    values: { href: "/values", label: "Values", mode: "Navbar" },
+    aboutUs: {
+        href: "/#aboutus", label: "About Us", mode: "Section"
+    }
+} satisfies Record<string, LinkEntry>;
 
-export const legalLinks: LinkEntry[] = links.filter((l) => l.mode == "Legal");
-export const navbarLinks: LinkEntry[] = links.filter((l) => l.mode == "Navbar");
-export const labLinks: LinkEntry[] = links.filter((l) => ["Section", "Labs", "Navbar"].includes(l.mode))
+const linkValues = Object.values(links);
+
+export const legalLinks: LinkEntry[] = linkValues.filter((l) => l.mode == "Legal");
+export const navbarLinks: LinkEntry[] = linkValues.filter((l) => l.mode == "Navbar");
+export const labLinks: LinkEntry[] = linkValues.filter((l) => ["Section", "Labs", "Navbar"].includes(l.mode))

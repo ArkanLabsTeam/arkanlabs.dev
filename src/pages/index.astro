@@ -5,11 +5,10 @@ import TextSection from "../components/TextSection.astro";
 import { homeTextSections } from "../data/home_text_sections";
 import { homeTimelineSections } from "../data/home_timeline_sections";
 import TimelineSection from "../components/TimelineSection.astro";
-const moreTransparentOnSmallDevicesClasses = "bg-surface/89 3xl:bg-surface";
+const moreTransparentOnSmallDevicesClasses = "bg-surface/80 3xl:bg-surface";
 ---
 
 <BaseLayout title="Home Page · Arkan Labs">
-	<DotGrid />
 	<div class="mb-80 3xl:mb-10">
 		{
 			homeTextSections.map((section) => (

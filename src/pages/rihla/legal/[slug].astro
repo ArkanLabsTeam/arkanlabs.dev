@@ -1,0 +1,33 @@
+---
+import type { GetStaticPaths } from "astro";
+import { getCollection, render } from "astro:content";
+import BaseLayout from "../../../layout/BaseLayout.astro";
+import Section from "../../../components/Section.astro";
+
+export const getStaticPaths = (async () => {
+    const docs = await getCollection("rihlaLegal");
+    return docs.map((doc) => {
+        return {
+            params: { slug: doc.id },
+            props: {
+                doc,
+            },
+        };
+    });
+}) satisfies GetStaticPaths;
+
+const { doc } = Astro.props;
+const { Content } = await render(doc);
+---
+
+<BaseLayout>
+    <Section
+    title={doc.data.title}
+    class="mb-8"
+    >
+    <br>
+        <Content />
+    </Section>
+    <script src="../../../lib/dots/cursor_tracker_desktop.ts"></script>
+
+</BaseLayout>
