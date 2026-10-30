@@ -1,0 +1,41 @@
+---
+import Section from "../components/Section.astro";
+import BaseLayout from "../layout/BaseLayout.astro";
+
+const title = "Sorry!";
+const description = `
+The page you're looking for does not exist.
+Have this though: 🍪
+`;
+
+const alternateDescription = `
+    If it speaks leave the room... What?
+`;
+
+const bodyPId = "bodyDiv";
+
+const vars = { bodyDivId: bodyPId, desc: alternateDescription }
+---
+
+<BaseLayout title="Page Not Found · Arkan Labs">
+    <div class="flex items-center justify-center md:p-40 min-h-[60dvh]">
+        <Section title={title}>
+            <p class="pt-4" id={bodyPId}>{description}</p>
+        </Section>
+    </div>
+    <script src="../lib/dots/cursor_tracker_desktop.ts"></script>
+    <script
+        define:vars={vars}
+        is:inline 
+    >
+
+        const element = document.getElementById(bodyDivId);
+        if (element !== null) {
+            const chance = Math.random() >= 9 / 10;
+            if (chance) {
+                element.textContent = desc;
+                setTimeout(() => window.location.replace("/"), 1500);
+            }
+        }
+    </script>
+</BaseLayout>

@@ -1,6 +1,14 @@
 ---
 import SectionEyebrow from "./SectionEyebrow.astro";
 
+
+type Props = {
+    title: string,
+    eyebrowTitle?: string,
+    class?: string,
+    id?: string
+}
+
 const { title, eyebrowTitle, class: className, id } = Astro.props;
 ---
 
