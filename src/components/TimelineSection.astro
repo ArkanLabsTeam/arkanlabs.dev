@@ -12,10 +12,10 @@ const { section, class: className } = Astro.props;
 const progressIndex = section.timeline.progressIndex;
 
 function getVariant(index: number): MilestoneVariant {
-    if (progressIndex >= index) {
-        return "done";
-    } else if (progressIndex + 1 === index) {
-        return "wip"
+    if (progressIndex === index) {
+        return "wip";
+    } else if (progressIndex > index) {
+        return "done"
     } else {
         return "upcoming"
     }
