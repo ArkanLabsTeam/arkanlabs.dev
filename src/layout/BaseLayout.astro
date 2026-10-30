@@ -5,6 +5,10 @@ import "../styles/global.css";
 import Footer from "../components/Footer.astro";
 import DotGrid from "../components/DotGrid.astro";
 
+type Props = {
+    title: string
+}
+
 const { title } = Astro.props;
 const sharedClasses = "mx-auto max-w-4xl px-4 md:px-6 w-full";
 ---

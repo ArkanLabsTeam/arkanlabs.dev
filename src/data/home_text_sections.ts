@@ -1,6 +1,6 @@
-import type { HomeTextSection } from "./types";
+import type { TextSection } from "./types";
 
-export const homeTextSections: HomeTextSection[] = [
+export const homeTextSections: TextSection[] = [
     {
         displayName: "About Us",
         id: "aboutus",

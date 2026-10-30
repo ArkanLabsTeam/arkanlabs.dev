@@ -1,4 +1,4 @@
-export type HomeTextSection = {
+export type TextSection = {
     id: string
     title: string,
     eyebrowTitle: string,
@@ -6,7 +6,7 @@ export type HomeTextSection = {
     displayName: string,
 }
 
-export type HomeTimelineSection = HomeTextSection
+export type HomeTimelineSection = TextSection
     & {
         timeline: {
             progressIndex: number,
