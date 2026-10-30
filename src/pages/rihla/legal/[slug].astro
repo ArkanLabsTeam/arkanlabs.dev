@@ -18,16 +18,31 @@ export const getStaticPaths = (async () => {
 
 const { doc } = Astro.props;
 const { Content } = await render(doc);
+
+const classesForMarkdown = `
+    prose max-w-none
+    prose-a:text-accent
+    prose-p:text-text
+    prose-headings:text-text
+    prose-strong:text-accent-2/75
+    prose-ol:list-[lower-alpha]
+    prose-li:text-text
+`;
 ---
 
 <BaseLayout>
-    <Section
-    title={doc.data.title}
-    class="mb-8"
+    <section
+        class:list={[
+            "border-border border-2 md:rounded-md rounded-sm p-4 bg-surface scroll-mt-20",
+            "mb-20"
+        ]}
     >
-    <br>
-        <Content />
-    </Section>
+        <h1 class="text-4xl pb-8">{doc.data.title}</h1>
+        <div class={classesForMarkdown}>
+            <Content />
+        </div>
+    </section>
     <script src="../../../lib/dots/cursor_tracker_desktop.ts"></script>
 
 </BaseLayout>
+
