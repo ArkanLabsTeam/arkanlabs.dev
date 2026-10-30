@@ -2,7 +2,7 @@
 title: "Rihla Terms of Service — Drivers"
 description: "The terms that apply when you drive with Rihla."
 effectiveDate: 2026-08-01
-lastUpdated: 2026-09-05
+lastUpdated: 2026-10-30
 ---
 
 These Terms of Service (“Terms”) govern access to and use of the Rihla mobile application and related services (the “App” or “Service”) as a driver, operated by the Publisher. The App connects independent Drivers with Riders and is operated in accordance with Islamic principles. By registering as a Driver or otherwise using the App (“Driver” or “you”), you agree to be bound by these Terms. If you do not agree, do not use the Service.
@@ -11,6 +11,8 @@ These Terms of Service (“Terms”) govern access to and use of the Rihla mobil
 
 - **“App”** — the Rihla application, website, and related services.
 - **“Publisher”** — the individual who owns and operates the App.
+- **“Driver”** — an individual registered on the App to provide Rides.
+- **“You” or “your”** — the Driver who agrees to these Terms.
 - **“Rider”** or **“User”** — an individual registered on the App to book Rides.
 - **“Ride”** — a single trip from a selected pickup point to a selected drop-off point, booked through the App.
 

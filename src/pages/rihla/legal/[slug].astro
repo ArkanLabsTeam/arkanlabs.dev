@@ -3,6 +3,7 @@ import type { GetStaticPaths } from "astro";
 import { getCollection, render } from "astro:content";
 import BaseLayout from "../../../layout/BaseLayout.astro";
 import Section from "../../../components/Section.astro";
+import { dateTimeToDateLong, ISOFormatDate } from "../../../lib/utils/general";
 
 export const getStaticPaths = (async () => {
     const docs = await getCollection("rihlaLegal");
@@ -28,16 +29,36 @@ const classesForMarkdown = `
     prose-ol:list-[lower-alpha]
     prose-li:text-text
 `;
+
+const lastUpdated = dateTimeToDateLong(doc.data.lastUpdated);
+const effectiveDate = dateTimeToDateLong(doc.data.effectiveDate);
+const dates = Object.entries(
+     {
+    "Effective Date": doc.data.lastUpdated,
+    "Last Updated": doc.data.effectiveDate,
+}
+);
+
 ---
 
-<BaseLayout>
+<BaseLayout title={doc.data.title}>
     <section
         class:list={[
             "border-border border-2 md:rounded-md rounded-sm p-4 bg-surface scroll-mt-20",
             "mb-20"
         ]}
     >
-        <h1 class="text-4xl pb-8">{doc.data.title}</h1>
+        <h1 class="text-4xl pb-4">{doc.data.title}</h1>
+        <div class="pb-6">
+            {
+            dates.map(
+                ([name, date]) => (
+                            <p><span class="text-accent">{name}: </span><time datetime={ISOFormatDate(date)}>{dateTimeToDateLong(date)}</time></p>
+
+                )
+            )
+        }
+        </div>
         <div class={classesForMarkdown}>
             <Content />
         </div>

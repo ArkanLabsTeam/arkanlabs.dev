@@ -47,3 +47,11 @@ export function clamp(val: number, min: number, max: number): number {
 export function closeTo(x: number, y: number, tolerance: number) {
     return Math.abs(x - y) < tolerance
 }
+
+export function dateTimeToDateLong(date: Date): string {
+    return date.toLocaleDateString("en-US", {dateStyle: "long"})
+}
+
+export function ISOFormatDate(date: Date): string {
+    return date.toISOString().split('T')[0];
+}

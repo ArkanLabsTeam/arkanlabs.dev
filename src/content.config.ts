@@ -9,7 +9,8 @@ const rihlaLegal = defineCollection(
             {
                 title: z.string(),
                 description: z.string(),
-                lastUpdated: z.coerce.date()
+                lastUpdated: z.coerce.date(),
+                effectiveDate: z.coerce.date()
             }
         )
     }

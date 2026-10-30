@@ -1,6 +1,7 @@
 ---
 title: "Rihla Privacy Policy"
 description: "How Rihla collects, uses and protects your personal data."
+effectiveDate: 2026-08-01
 lastUpdated: 2026-09-05
 ---
 
@@ -166,13 +167,13 @@ Where required by applicable law, the Publisher will ensure that international t
 
 You have the right to delete or request that the Publisher assist in deleting the Personal Data that the Publisher has collected about You.
 
-To request access to, correction of, or deletion of Your Personal Data, email the Publisher at <support@arkanlabs.dev>.
+To request access to, correction of, or deletion of Your Personal Data, email the Publisher at <arkan.architecture.support@gmail.com>.
 
 Please note, however, that the Publisher may need to retain certain information when the Publisher has a legal obligation or lawful basis to do so.
 
 ### Deleting Your Account
 
-To delete Your Account, email the Publisher at <support@arkanlabs.dev> and include the phone number You used to sign up for the Service. The Publisher will delete Your Account, and the Personal Data associated with it, within 14 days of receiving Your request, except where the Publisher is required or permitted to retain certain information as described under Retention of Your Personal Data above.
+To delete Your Account, email the Publisher at <arkan.architecture.support@gmail.com> and include the phone number You used to sign up for the Service. The Publisher will delete Your Account, and the Personal Data associated with it, within 14 days of receiving Your request, except where the Publisher is required or permitted to retain certain information as described under Retention of Your Personal Data above.
 
 ### Disclosure of Your Personal Data
 
