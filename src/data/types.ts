@@ -3,7 +3,7 @@ export type TextSection = {
     title: string,
     eyebrowTitle: string,
     segments: string[],
-    displayName: string,
+    displayName?: string,
 }
 
 export type HomeTimelineSection = TextSection
