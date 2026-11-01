@@ -1,0 +1,40 @@
+---
+import { Font } from "astro:assets";
+import Navbar from "../components/Navbar.astro";
+import "../styles/global.css";
+import Footer from "../components/Footer.astro";
+import DotGrid from "../components/DotGrid.astro";
+
+type Props = {
+    title: string
+}
+
+const { title } = Astro.props;
+const sharedClasses = "mx-auto max-w-4xl px-4 md:px-6 w-full";
+---
+
+<!doctype html>
+<html lang="en" class="motion-safe:scroll-smooth">
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="icon" type="image/png" href="/favicon.svg" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <Font cssVariable="--font-libron-regular" />
+        <Font cssVariable="--font-bricolage-grotesque" />
+        <Font cssVariable="--font-unbounded" />
+        <Font cssVariable="--font-mono" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{title}</title>
+    </head>
+    <body class="flex-col flex min-h-dvh">
+        <Navbar class={sharedClasses} />
+        <main class:list={[
+            sharedClasses,
+            "grow"
+        ]} id="main-space">
+            <slot />
+        </main>
+        <DotGrid />
+        <Footer class={sharedClasses} />
+    </body>
+</html>

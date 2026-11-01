@@ -1,0 +1,24 @@
+---
+import type { TextSection } from "../data/types";
+import Section from "./Section.astro";
+
+type Props = {
+    section: TextSection;
+    class?: string;
+};
+
+const { section, class: className } = Astro.props;
+---
+
+<Section
+    title={section.title}
+    eyebrowTitle={section.eyebrowTitle}
+    class={className}
+    id={section.id}
+>
+    {
+        section.segments.map((seg: string, index: number) => {
+            return <p class="pt-4">{seg}</p>;
+        })
+    }
+</Section>

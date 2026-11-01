@@ -1,0 +1,37 @@
+import type { HomeTimelineSection } from "./types";
+
+export let homeTimelineSections: HomeTimelineSection[] = [
+    {
+        id: "rihla",
+        displayName: "Rihla",
+        title: "Comfortable and Affordable Rides",
+        eyebrowTitle: "02 / RIHLA",
+        segments: [
+            `Rihla (Arabic for "journey")
+            is a ride-sharing service designed for university students,
+            allowing them to get to their universities quickly and 
+            affordably.`,
+
+            `It uses a scheduling feature where you book at least
+            a day ahead. And in return it gives us time to find 
+            the most suitable and affordable rides for you and for all students.
+            `,
+            `It has built-in filters that prevent you from being alone with a driver of the opposite gender, 
+            or sitting next to a person of the opposite gender. 
+            These filters can't be disabled, as Rihla was built on values we truly care about. 
+           `,
+            ` It also protects your anonymity by hiding your contact information and name from the other riders. 
+            We disclose your name to the driver and temporarily disclose your phone number on their arrival to your pickup location.`
+        ],
+        timeline: {
+            progressIndex: 1,
+            milestones: [
+                "Closed Alpha Testing",
+                "Open Beta at Al‑Huson University",
+                "Full Release at All Irbid Universities",
+                "Group Rides",
+                "iOS Release",
+            ]
+        }
+    }
+] as const;

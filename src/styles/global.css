@@ -1,0 +1,51 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+    /* base */
+    --color-bg: #14151D;
+    --color-surface: #1F2029;
+    --color-surface-2: #292A36;
+    --color-border: #323444;
+
+    /* text */
+    --color-text: #D4DCFF;
+    --color-muted: #9AA0C3;
+
+    /* brand */
+    --color-accent: #1B9AAA;
+    /* buttons, progress, highlights */
+    --color-accent-bright: #2BB5C7;
+    /* links and small accent text */
+    --color-on-accent: #14151D;
+    /* text on accent buttons */
+    --color-accent-2: #8963BA;
+    /* per-project accent: fills, bars, borders only */
+
+    /* status */
+    --color-success: #82D173;
+    --color-warning: #FBBF24;
+    --color-danger: #F87171;
+
+    --font-hacked: var(--font-hacked);
+    --font-unbounded: var(--font-unbounded);
+    --font-mono: var(--font-mono);
+    /* ping 1s cubic-bezier(0, 0, 0.2, 1) infinite */
+    --animate-ping-weak: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+    --breakpoint-3xl: 1900px;
+
+    @keyframes ping {
+
+        75%,
+        100% {
+            transform: scale(1.65);
+            opacity: 0;
+        }
+    }
+}
+
+body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-bricolage-grotesque);
+}

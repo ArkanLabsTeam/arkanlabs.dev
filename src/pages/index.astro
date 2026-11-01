@@ -1,0 +1,33 @@
+---
+import BaseLayout from "../layout/BaseLayout.astro";
+import DotGrid from "../components/DotGrid.astro";
+import TextSection from "../components/TextSection.astro";
+import { homeTextSections } from "../data/home_text_sections";
+import { homeTimelineSections } from "../data/home_timeline_sections";
+import TimelineSection from "../components/TimelineSection.astro";
+const moreTransparentOnSmallDevicesClasses = "bg-surface/80 3xl:bg-surface";
+---
+
+<BaseLayout title="Home Page · Arkan Labs">
+	<div class="mb-80 3xl:mb-10">
+		{
+			homeTextSections.map((section) => (
+				<TextSection
+					section={section}
+					class={moreTransparentOnSmallDevicesClasses}
+				/>
+			))
+		}
+	</div>
+	<div class="mb-80 3xl:mb-10">
+		{
+			homeTimelineSections.map((section) => (
+				<TimelineSection
+					section={section}
+					class={moreTransparentOnSmallDevicesClasses}
+				/>
+			))
+		}
+	</div>
+	<script src="../lib/dots/shape_animator.ts"></script>
+</BaseLayout>
