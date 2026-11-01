@@ -1,4 +1,4 @@
-import { Brightness, type Shape } from "./shape_utils";
+import { Brightness, type Shape } from "../shape_utils/shape";
 
 export const alShape: Shape = {
     sizeRequiredInDots: {

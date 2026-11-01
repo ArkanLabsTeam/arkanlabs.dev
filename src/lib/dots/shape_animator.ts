@@ -1,8 +1,12 @@
 import { dotDistance, getAccentColor, getBackgroundColor, getBaseColor, setupCoreLoop, type Dot, type DrawDotFunction, type DrawLineFunction, type EffectSetupFunction, type PublicCoreState, type RequestFrameFunction } from "./dots_core/dots_core";
 import { clamp, smoothStep, type Position } from "../utils/general"
-import { Brightness, getLineThickness, getOpacityFromBrightness, getScaleFromBrightness, getShapeHeight, getShapeWidth, type Segment, type Shape } from "./shapes/shape_utils";
+import { Brightness, getLineThickness, getOpacityFromBrightness, getScaleFromBrightness, getShapeHeight, getShapeWidth, type DotWithBrightness, type Segment, type SegmentWithShouldDrawFlag, type Shape } from "./shape_utils/shape";
 import { alShape } from "./shapes/AL_shape";
 import { getMaxScrollHeight, isDocumentScrollable } from "../utils/document";
+import { getShapeDrawAreaStart } from "./shape_utils/drawing_area";
+import { translateGlobalPositionToGridIndex, translateGridIndexToGlobalPosition } from "./shape_utils/position_translators";
+import { getDotKeyForMap, getDotsToDrawWithoutCollisions, getSegmentsToDrawWithoutCollisions } from "./shape_utils/dot_segment_drawing";
+import { getOpacityDecreaseEffectStartCoordinate, getRadiusInGridIndices } from "./shape_utils/background_opacity";
 
 type ShapeDrawerState = {
     canScroll: boolean,
@@ -22,13 +26,6 @@ type ShapeDrawerState = {
 // only use as arguments or per-update, don't store.
 // because updating any original objects won't propagate
 type JoinedState = PublicCoreState & ShapeDrawerState
-type DotWithBrightness = Dot & { brightness: Brightness }
-type DotWithDrawingFlag = Dot & { shouldDraw: boolean, brightness?: Brightness };
-type SegmentWithShouldDrawFlag = {
-    dot1: DotWithDrawingFlag,
-    dot2: DotWithDrawingFlag,
-    brightness: Brightness
-}
 const SHAPE_DRAWING_CONFIG = {
     mainAreaId: "main-space",
     horizontalPadding: 10,
@@ -44,7 +41,7 @@ function setupMainLoop(shape: Shape): void {
     let drawDotFunction: DrawDotFunction;
     let drawLineFunction: DrawLineFunction;
     const setup: EffectSetupFunction = (requestFrame, drawDot, drawLine, coreState) => {
-        const drawingAreaStart = getShapeDrawAreaStart(shape, coreState);
+        const drawingAreaStart = getShapeDrawAreaStart(shape, coreState, SHAPE_DRAWING_CONFIG.mainAreaId, SHAPE_DRAWING_CONFIG.horizontalPadding);
         const maxScrollPosition = getMaxScrollHeight();
         const currentScrollPosition = window.scrollY;
         if (!drawingAreaStart) throw Error("Can't load drawing area");
@@ -100,7 +97,7 @@ function setupMainLoop(shape: Shape): void {
     }
 
     const onResize = (coreState: PublicCoreState) => {
-        const drawingAreaStart = getShapeDrawAreaStart(shape, coreState);
+        const drawingAreaStart = getShapeDrawAreaStart(shape, coreState, SHAPE_DRAWING_CONFIG.mainAreaId, SHAPE_DRAWING_CONFIG.horizontalPadding);
         const canScroll = isDocumentScrollable();
         if (drawingAreaStart == null) return;
 
@@ -123,110 +120,6 @@ function setupMainLoop(shape: Shape): void {
 
 setupMainLoop(alShape); // you would wanna build a chooser file
 
-
-// canvas
-/**
- * It must be known this function and most others in the Dot engine 
- * depend on the canvas taking up the entire width and height of the screen
- */
-function getShapeDrawAreaStart(shape: Shape, coreState: PublicCoreState): Position | null {
-    const mainAreaWidth = getMainAreaWidth();
-    const sideAreaWidth = getSideAreaWidth(coreState);
-    const canDrawInSide = canDrawInSideArea(shape, coreState, sideAreaWidth);
-
-    if (mainAreaWidth == null || canDrawInSide == null || sideAreaWidth === null) return null;
-
-    const drawingAreaStartInCenter = getDrawingAreaStartInCenter(shape, coreState);
-    const drawingAreaStartOnSide = getDrawingAreaStartOnSide(shape, mainAreaWidth, sideAreaWidth, coreState);
-
-    return canDrawInSide ? drawingAreaStartOnSide : drawingAreaStartInCenter;
-}
-
-function getDrawingAreaStartOnSide(shape: Shape, mainAreaWidth: number, sideAreaWidth: number, coreState: PublicCoreState): Position {
-    const drawingAreaStartVertical = getVerticalDrawingStartInCenter(coreState, shape);
-
-    // since the mainAreaWidth is centered, we need to add one side area width to get the width 
-    // from the left till the end of the main area
-    const startingPositionHorizontal = mainAreaWidth + sideAreaWidth + SHAPE_DRAWING_CONFIG.horizontalPadding
-    const drawingAreaStartHorizontalSnapped = translateAbsoluteCoordinateToDot(coreState, startingPositionHorizontal);
-    return {
-        x: drawingAreaStartHorizontalSnapped,
-        y: drawingAreaStartVertical
-    }
-
-}
-
-
-function getDrawingAreaStartInCenter(shape: Shape, coreState: PublicCoreState) {
-    const drawingStartVertical = getVerticalDrawingStartInCenter(coreState, shape);
-    const drawingStartHorizontal = getHorizontalDrawingStartInCenter(coreState, shape);
-
-
-    return { x: drawingStartHorizontal, y: drawingStartVertical }
-}
-
-function getMainAreaWidth() {
-    const element = document.getElementById(SHAPE_DRAWING_CONFIG.mainAreaId);
-    const pageWidth = element?.getBoundingClientRect().width ?? null;
-    return pageWidth;
-}
-
-
-function canDrawInSideArea(shape: Shape, coreState: PublicCoreState, sideAreaWidth: number | null): boolean | null {
-    const shapeWidth = getShapeWidth(shape, coreState.grid.cellSize);
-
-    const paddedWidth = shapeWidth + SHAPE_DRAWING_CONFIG.horizontalPadding * 2;
-
-    if (sideAreaWidth === null) return null;
-
-    return paddedWidth <= sideAreaWidth;
-
-}
-
-function getHorizontalDrawingStartInCenter(coreState: PublicCoreState, shape: Shape) {
-    const cellSize = coreState.grid.cellSize;
-    const canvasWidth = coreState.canvas.getBoundingClientRect().width;
-    const shapeWidth = getShapeWidth(shape, cellSize);
-    const absoluteStartHorizontal = canvasWidth / 2 - shapeWidth / 2;
-    const drawingStartHorizontal = translateAbsoluteCoordinateToDot(coreState, absoluteStartHorizontal);
-
-    return drawingStartHorizontal;
-
-}
-
-function getVerticalDrawingStartInCenter(coreState: PublicCoreState, shape: Shape): number {
-    const cellSize = coreState.grid.cellSize;
-    const canvasHeight = coreState.canvas.getBoundingClientRect().height;
-    const shapeHeight = getShapeHeight(shape, cellSize);
-    const absoluteCenter = canvasHeight / 2 - shapeHeight / 2;
-    return translateAbsoluteCoordinateToDot(coreState, absoluteCenter);
-}
-
-
-
-function getSideAreaWidth(coreState: PublicCoreState) {
-    const pageWidth = getMainAreaWidth();
-    if (!pageWidth) return null;
-    const canvasWidth = coreState.canvas.getBoundingClientRect().width;
-    // since the main area is centered, this returns the sum of 2 areas
-    // divide them by 2 to get the area of 1 side
-    return (canvasWidth - pageWidth) / 2;
-}
-
-/**
- * 
- * @param coreState The public state provided by dots core
- * @param coordinate The x/y coordinate to translate to dot coordinates
- * @returns the new transformed coordinate
- */
-function translateAbsoluteCoordinateToDot(coreState: PublicCoreState, coordinate: number) {
-    const cellSize = coreState.grid.cellSize;
-    // since dots land in the middle of cells we remove half a cell
-    const dotIndex = Math.round((coordinate - cellSize / 2) / cellSize);
-
-    const centeredOnDot = dotIndex * cellSize + cellSize / 2;
-    return centeredOnDot;
-}
 
 
 // dots
@@ -311,7 +204,7 @@ function lowerBackgroundDotOpacity(joinedState: JoinedState, dot: Dot) {
 
     const center = translateGlobalPositionToGridIndex(joinedState, dot);
 
-    const radiusInGridFormat = getRadiusInGridIndices(joinedState);
+    const radiusInGridFormat = getRadiusInGridIndices(joinedState, SHAPE_DRAWING_CONFIG.backgroundDotOpacityDecrease);
     const start = getOpacityDecreaseEffectStartCoordinate(center, radiusInGridFormat);
     const diameterInGridFormatClampedWidth = Math.min(radiusInGridFormat * 2, gridWidth - start.x);
     const diameterInGridFormatClamped2D = Math.min(diameterInGridFormatClampedWidth, gridHeight - start.y);
@@ -331,121 +224,7 @@ function lowerBackgroundDotOpacity(joinedState: JoinedState, dot: Dot) {
 }
 
 
-function getDotsToDrawMapWithBrightness(segments: Segment[]): Map<number, DotWithBrightness | undefined> {
-    const map: Map<number, DotWithBrightness> = new Map();
-    for (const segment of segments) {
-        const dot1 = segment.dot1;
-        const dot2 = segment.dot2;
 
-        const brightness = segment.brightness;
-
-        const key1 = getDotKeyForMap(dot1);
-        const key2 = getDotKeyForMap(dot2);
-
-        const dot1InMap = map.get(key1);
-        const dot2InMap = map.get(key2);
-
-        const newBrightness1 = Math.max((dot1InMap?.brightness) ?? Brightness.dim, brightness);
-        const newBrightness2 = Math.max((dot2InMap?.brightness) ?? Brightness.dim, brightness);
-
-        map.set(key1, { ...dot1, brightness: newBrightness1 });
-        map.set(key2, { ...dot2, brightness: newBrightness2 });
-    }
-    return map;
-}
-
-function getDotsToDrawWithoutCollisions(state: PublicCoreState, segments: SegmentWithShouldDrawFlag[]): Map<number, Dot> {
-    const map: Map<number, Dot> = new Map();
-    for (const segment of segments) {
-        const dot1 = segment.dot1;
-        const dot2 = segment.dot2;
-        const dots = [dot1, dot2];
-        for (const dot of dots) {
-            if (dot.shouldDraw) {
-                const dotInGridIndex = translateGlobalPositionToGridIndex(state, dot);
-                const key = getDotKeyForMap(dotInGridIndex);
-                map.set(key, dot);
-            }
-        }
-    }
-
-
-    return map;
-}
-
-function getOpacityDecreaseEffectStartCoordinate(center: Position, radius: number): Position {
-    const x = center.x - radius;
-    const y = center.y - radius;
-    return { x, y }
-}
-
-function getRadiusInGridIndices(state: PublicCoreState) {
-    const cellSize = state.grid.cellSize;
-    const radius = SHAPE_DRAWING_CONFIG.backgroundDotOpacityDecrease;
-    return Math.max(Math.round(radius / cellSize), 1);
-}
-
-function translateGlobalPositionToGridIndex(state: PublicCoreState, dot: Dot): Dot {
-    const cellSize = state.grid.cellSize;
-    const x = Math.round((dot.x - cellSize / 2) / cellSize);
-    const y = Math.round((dot.y - cellSize / 2) / cellSize);
-    return { x, y };
-}
-
-function translateGridIndexToGlobalPosition(state: PublicCoreState, dot: Dot): Dot {
-    const cellSize = state.grid.cellSize;
-    const x = dot.x * cellSize + cellSize / 2;
-    const y = dot.y * cellSize + cellSize / 2;
-    return { x, y }
-
-}
-
-
-/**
-* To use this function you must ensure that all places that use the Map this key is for use the same origin.
-* Some dots use css px format, others use coordiates local to shape start and others use global grid coordinates
-*/
-function getDotKeyForMap(dot: Dot) {
-
-    return dot.x * 10_000 + dot.y;
-}
-
-
-function getSegmentsToDrawWithoutCollisions(drawingAreaStart: Position, state: PublicCoreState, segments: Segment[]): SegmentWithShouldDrawFlag[] {
-    const newSegments: SegmentWithShouldDrawFlag[] = [];
-    const dotsToDrawWithoutCollisions = getDotsToDrawMapWithBrightness(segments);
-    for (const segment of segments) {
-        const dot1 = segment.dot1;
-        const dot2 = segment.dot2;
-        const brightness = segment.brightness;
-
-        const dot1Key = getDotKeyForMap(dot1);
-        const dot2Key = getDotKeyForMap(dot2);
-
-        const dot1FromMap = dotsToDrawWithoutCollisions.get(dot1Key);
-        const dot2FromMap = dotsToDrawWithoutCollisions.get(dot2Key);
-
-        const { dot1: globalDot1, dot2: globalDot2 } = getGlobalDotPositions(drawingAreaStart, state, dot1, dot2);
-
-
-        let dot1ToAdd: DotWithDrawingFlag = { ...globalDot1, shouldDraw: dot1FromMap != undefined, brightness: dot1FromMap?.brightness };
-        let dot2ToAdd: DotWithDrawingFlag = { ...globalDot2, shouldDraw: dot2FromMap != undefined, brightness: dot2FromMap?.brightness };
-
-        dotsToDrawWithoutCollisions.delete(dot1Key);
-        dotsToDrawWithoutCollisions.delete(dot2Key);
-
-        newSegments.push({ dot1: dot1ToAdd, dot2: dot2ToAdd, brightness: brightness })
-
-    }
-    return newSegments;
-
-}
-
-function getGlobalDotPositions(drawingAreaStart: Position, state: PublicCoreState, dot1: Dot, dot2: Dot): { dot1: Dot, dot2: Dot } {
-    const dot1InGlobalCoords = translateGridPositionToGlobalPosition(drawingAreaStart, state, dot1);
-    const dot2InGlobalCoords = translateGridPositionToGlobalPosition(drawingAreaStart, state, dot2);
-    return { dot1: dot1InGlobalCoords, dot2: dot2InGlobalCoords }
-}
 
 function getSegmentsToDraw(state: ShapeDrawerState): SegmentWithShouldDrawFlag[] {
     const progress = getAnimationProgress(state);
@@ -455,17 +234,6 @@ function getSegmentsToDraw(state: ShapeDrawerState): SegmentWithShouldDrawFlag[]
     return state.allSegments.slice(0, endPosition);
 }
 
-
-
-
-function translateGridPositionToGlobalPosition(drawingAreaStart: Position, state: PublicCoreState, gridCoordinates: Position): Position {
-    const cellSize = state.grid.cellSize;
-    const verticalShiftFromOrigin = gridCoordinates.y * cellSize;
-    const horizontalShiftFromOrigin = gridCoordinates.x * cellSize;
-    const x = drawingAreaStart.x + horizontalShiftFromOrigin;
-    const y = drawingAreaStart.y + verticalShiftFromOrigin;
-    return { x, y }
-}
 
 function getAnimationProgress(state: ShapeDrawerState): number {
     const currentScrollPosition = state.scrollPosition;

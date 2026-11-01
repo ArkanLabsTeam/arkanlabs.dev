@@ -5,10 +5,20 @@ export enum Brightness {
     bright = 1
 }
 
+
+export type DotWithBrightness = Dot & { brightness: Brightness }
+
 export type Shape = {
     sizeRequiredInDots: Size, // in grid format
     segments: Segment[],
 
+}
+
+export type DotWithDrawingFlag = Dot & { shouldDraw: boolean, brightness?: Brightness };
+export type SegmentWithShouldDrawFlag = {
+    dot1: DotWithDrawingFlag,
+    dot2: DotWithDrawingFlag,
+    brightness: Brightness
 }
 
 export type Size = { width: number, height: number };
