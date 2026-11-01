@@ -2,7 +2,7 @@ import type { TextSection } from "./types";
 
 export const valuesTextSections: TextSection[] = [
     {
-        id: "AIValue",
+        id: "IslamValue",
         title: "Our Beliefs",
         eyebrowTitle:"01 / ISLAM",
         segments: [
