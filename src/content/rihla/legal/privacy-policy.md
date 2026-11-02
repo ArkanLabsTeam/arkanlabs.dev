@@ -2,7 +2,7 @@
 title: "Rihla Privacy Policy"
 description: "How Rihla collects, uses and protects your personal data."
 effectiveDate: 2026-08-01
-lastUpdated: 2026-09-05
+lastUpdated: 2026-11-02
 ---
 
 This Privacy Policy describes the Publisher’s policies and procedures on the collection, use and disclosure of Your information when You use the Service and tells You about Your privacy rights and how the law protects You.
@@ -78,10 +78,6 @@ The Publisher uses this information to provide features of the Service and to im
 
 You can enable or disable access to this information at any time, through Your Device settings.
 
-#### Tracking Technologies and Cookies
-
-The Publisher uses tracking technologies (such as cookies) to track the activity and to improve the Service. The technologies the Publisher uses may include:
-
 ### Use of Your Personal Data
 
 The Publisher may use Personal Data for the following purposes:
@@ -90,7 +86,6 @@ The Publisher may use Personal Data for the following purposes:
 - **To manage Your Account:** to manage Your registration as a user of the Service. The Personal Data You provide can give You access to different functionalities of the Service that are available to You as a registered user.
 - **For the performance of a contract:** the development, compliance and undertaking of the purchase contract for the products, items or services You have purchased or of any other contract with the Publisher through the Service.
 - **To contact You:** To contact You by email, telephone calls, SMS, or other equivalent forms of electronic communication, such as a mobile application’s push notifications regarding updates or informative communications related to the functionalities, products or contracted services, including the security updates, when necessary or reasonable for their implementation.
-- **To provide You** with news, special offers, and general information about other goods, services and events which the Publisher offers that are similar to those that You have already purchased or inquired about. The Publisher sends such marketing communications only where permitted by applicable law: where prior consent is required (for example, under the laws applicable in the EEA and the UK), the Publisher will send them only with Your consent; otherwise, the Publisher may send them until You opt out. You may opt out or withdraw Your consent at any time by using the unsubscribe link in any marketing email the Publisher sends or by contacting the Publisher.
 - **To manage Your requests:** To attend and manage Your requests to the Publisher.
 - **For business transfers:** The Publisher may use Your Personal Data to evaluate or conduct a merger, divestiture, restructuring, reorganization, dissolution, or other sale or transfer of some or all of the Publisher’s assets, whether as a going concern or as part of bankruptcy, liquidation, or similar proceeding, in which Personal Data held by the Publisher about users of the Service is among the assets transferred.
 - **For other purposes**: The Publisher may use Your information for other purposes, such as data analysis, identifying usage trends, determining the effectiveness of the Publisher’s promotional campaigns, and evaluating and improving the Service, products, services, marketing and Your experience.
@@ -105,20 +100,13 @@ The Publisher may share Your Personal Data in the following situations:
 
 #### Text Messages Privacy Notice
 
-You have the option to receive text (SMS) messages from the Publisher. If You opt in to text messages, the Publisher will send You updates, notifications, and other communications as described below. When You opt in, the Publisher will collect and store the information You provide in connection with text messaging, such as Your phone number, the date and method of Your consent, and message delivery and read information.
+The Publisher sends text (SMS) messages only to verify Your phone number and sign You in to the Service, using one-time passcodes (OTP). The Publisher does not send marketing, promotional, or any other kind of text message.
 
-No mobile information will be shared with or sold to third parties or affiliates for marketing or promotional purposes. The phone numbers and consent records the Publisher collects for texting are never shared with anyone for any purpose, except the Service Providers that technically have to handle them to deliver the texts.
+To send these messages, the Publisher collects and stores Your phone number and message delivery information.
 
-Consent to receive text messages is not a condition of any purchase or use of the Service. If You consent to receive SMS from the Publisher, You agree to receive text messages from the Publisher related to:
+No mobile information will be shared with or sold to third parties or affiliates for marketing or promotional purposes. Phone numbers collected for texting are never shared with anyone for any purpose, except the Service Providers that technically have to handle them to deliver the texts (currently Twillio).
 
-- Customer care and support
-- Account notifications, such as activity, status, or renewal reminders
-- Delivery notifications and updates on the status of a delivery
-- Authentication messages, such as one-time passwords (OTP) and passcodes
-- Security alerts, such as suspicious login attempts or unusual account activity
-- Marketing and promotional offers, discounts, and other promotional content
-
-Reply STOP to opt-out. Reply HELP for support. Message & data rates may apply. Messaging frequency may vary. Carriers are not liable for delayed or undelivered messages.
+Receiving passcode messages is required to create and sign in to Your Account. Message frequency depends on how often You sign in. Message & data rates may apply. Reply HELP for support. Replying STOP will stop all messages, including passcodes, which will prevent You from signing in. Carriers are not liable for delayed or undelivered messages.
 
 ### Retention of Your Personal Data
 
@@ -167,13 +155,13 @@ Where required by applicable law, the Publisher will ensure that international t
 
 You have the right to delete or request that the Publisher assist in deleting the Personal Data that the Publisher has collected about You.
 
-To request access to, correction of, or deletion of Your Personal Data, email the Publisher at <arkan.architecture.support@gmail.com>.
+To request access to, correction of, or deletion of Your Personal Data, email the Publisher at <support@arkanlabs.dev>.
 
 Please note, however, that the Publisher may need to retain certain information when the Publisher has a legal obligation or lawful basis to do so.
 
 ### Deleting Your Account
 
-To delete Your Account, email the Publisher at <arkan.architecture.support@gmail.com> and include the phone number You used to sign up for the Service. The Publisher will delete Your Account, and the Personal Data associated with it, within 14 days of receiving Your request, except where the Publisher is required or permitted to retain certain information as described under Retention of Your Personal Data above.
+To delete Your Account, email the Publisher at <support@arkanlabs.dev> and include the phone number You used to sign up for the Service. The Publisher will delete Your Account, and the Personal Data associated with it, within 14 days of receiving Your request, except where the Publisher is required or permitted to retain certain information as described under Retention of Your Personal Data above.
 
 ### Disclosure of Your Personal Data
 
