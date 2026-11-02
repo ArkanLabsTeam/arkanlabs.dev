@@ -34,7 +34,7 @@ export const valuesTextSections: TextSection[] = [
             `We build, test and experiment with new features in our products ourselves. AI has its 
             own use cases and benefits, but it does not belong in our products as an asset creator or storyteller or even as a developer.
             We use it to help us trace bugs 
-            in our own code, it helps us with optimization advice. It's a tool to us, not a producer.
+            in our own code, and it helps us with optimization advice. It's a tool to us, not a producer.
             `
         ]
     },
