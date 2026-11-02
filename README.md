@@ -11,7 +11,7 @@ The [License](LICENSE) only covers the code. It does **not** cover any graphics 
 - The Arkan Labs favicon (/public/)
 - The Arkan Labs Apple Touch Icon (/public/)
 - The Arkan Labs shape drawn using the Dot Grid Engine (/src/lib/dots/shapes/AL_shape.ts)
-- Any documents or text(/src/content/ and /src/data)
+- Any documents or text(/src/content/ and /src/data/)
 - The Arkan Labs name
 - Any project name included in the website, such as Rihla
 
