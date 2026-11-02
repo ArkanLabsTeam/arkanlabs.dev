@@ -6,7 +6,7 @@
 
 
 ### License
-The [License](LICENSE) only covers the code. It does **not** cover any graphics or text that is used to identify the brand "Arkan Labs", or any legal documents. This includes but is not limited to:
+The [License](LICENSE) only covers the code. It does **not** cover any graphics or text that is used to identify the brand "Arkan Labs", it's projects, or any legal documents. This includes but is not limited to:
 - The Arkan Labs logo (/src/components/ArkanLabsText.astro)
 - The Arkan Labs favicon (/public/)
 - The Arkan Labs Apple Touch Icon (/public/)
