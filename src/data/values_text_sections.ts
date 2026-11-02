@@ -6,9 +6,9 @@ export const valuesTextSections: TextSection[] = [
         title: "Our Beliefs",
         eyebrowTitle:"01 / ISLAM",
         segments: [
-            `We are a Muslim team, we make sure our products are Sharia compliant to provide a fair experience to our users. In Rihla for example,
-            we ensure that a rider can't be present in seclusion with a driver of the opposite gender, or be seated next to a person of the opposite gender.
-            For our games in the future, we will ensure that our products are appropriate and free of prohibited mechanics like gambling.
+            `We are a Muslim team. We make sure our products are Sharia compliant to provide a safer experience for every user. In Rihla, for example,
+            we ensure a rider's safety by guaranteeing they don't end up alone with a driver of the opposite gender, or be seated next to a person of the opposite gender.
+            For our games in the future, our games will be free of inappropriate content like nudity or exploitative features like gambling (e.g., loot boxes bought with real money).
             `
         ]
     },
