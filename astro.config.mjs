@@ -3,8 +3,11 @@ import { defineConfig, fontProviders } from 'astro/config';
 
 import tailwindcss from '@tailwindcss/vite';
 
+import sitemap from "@astrojs/sitemap";
+
 // https://astro.build/config
 export default defineConfig({
+  site: "https://arkanlabs.dev",
   fonts: [{
     provider: fontProviders.local(),
     name: "LibronRegular",
@@ -37,5 +40,6 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
   },
-  
+
+  integrations: [sitemap()],
 });
